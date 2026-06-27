@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:sehatiku_mobile/core/core.dart';
+import 'package:sehatiku_mobile/data/models/auth_models.dart';
 import 'package:sehatiku_mobile/features/ai/ai_screen.dart';
 import 'package:sehatiku_mobile/features/dashboard/dashboard_screen.dart';
 import 'package:sehatiku_mobile/features/doctor/doctor_screen.dart';
@@ -15,6 +16,7 @@ import 'package:sehatiku_mobile/shared/widgets/widgets.dart';
 class AppHome extends StatelessWidget {
   const AppHome({
     super.key,
+    this.session,
     required this.view,
     required this.progressIndex,
     required this.rangeIndex,
@@ -31,6 +33,8 @@ class AppHome extends StatelessWidget {
     required this.onLogout,
   });
 
+  /// The active session — null only in edge-cases before auth is resolved.
+  final Session? session;
   final MainView view;
   final int progressIndex;
   final int rangeIndex;
@@ -44,7 +48,7 @@ class AppHome extends StatelessWidget {
   final ValueChanged<int> onEducationFilter;
   final ValueChanged<bool> onDarkMode;
   final ValueChanged<String> onAction;
-  final VoidCallback onLogout;
+  final Future<void> Function() onLogout;
 
   bool get _showNav => {
     MainView.beranda,
@@ -69,7 +73,10 @@ class AppHome extends StatelessWidget {
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 220),
             child: switch (view) {
-              MainView.beranda => DashboardScreen(onView: onView),
+              MainView.beranda => DashboardScreen(
+                onView: onView,
+                fullName: session?.fullName,
+              ),
               MainView.catatan => RecordScreen(
                 onSaved: onAction,
                 onView: onView,
@@ -91,6 +98,7 @@ class AppHome extends StatelessWidget {
                 onLogout: onLogout,
                 onAction: onAction,
                 onDoctor: () => onView(MainView.dokter),
+                fullName: session?.fullName,
               ),
               MainView.dokter => DoctorScreen(
                 onBack: () => onView(MainView.beranda),

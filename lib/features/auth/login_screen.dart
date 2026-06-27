@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 
 import 'package:sehatiku_mobile/core/core.dart';
+import 'package:sehatiku_mobile/data/models/auth_models.dart';
+import 'package:sehatiku_mobile/data/services/api_client.dart';
+import 'package:sehatiku_mobile/data/services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, required this.onLogin});
 
-  final VoidCallback onLogin;
+  /// Called after a successful login. Receives the persisted [Session].
+  final ValueChanged<Session> onLogin;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -21,6 +25,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   bool _userFocused = false;
   bool _passFocused = false;
   bool _obscure = true;
+  bool _loading = false;
   String? _error;
 
   AnimationController? _pulseController;
@@ -80,7 +85,64 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       return;
     }
     setState(() => _error = null);
-    widget.onLogin();
+    _doLogin(user, pass);
+  }
+
+  Future<void> _doLogin(String username, String password) async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      // Try patient login first; if 401 try nakes login.
+      // A smarter UX would offer a role selector — for now we auto-detect.
+      Session session;
+      try {
+        session = await AuthService.instance.loginPatient(
+          username: username,
+          password: password,
+        );
+      } on ApiException catch (e) {
+        if (e.statusCode == 401) {
+          // Might be a nakes account — try the nakes endpoint.
+          session = await AuthService.instance.loginNakes(
+            username: username,
+            password: password,
+          );
+        } else {
+          rethrow;
+        }
+      }
+      if (!mounted) return;
+      widget.onLogin(session);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = _friendlyError(e);
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Tidak dapat terhubung ke server. Periksa koneksi Anda.';
+        _loading = false;
+      });
+    }
+  }
+
+  String _friendlyError(ApiException e) {
+    switch (e.statusCode) {
+      case 401:
+        return 'Username atau password salah.';
+      case 429:
+        return 'Terlalu banyak percobaan. Coba lagi dalam 15 menit.';
+      case 400:
+        return 'Data yang dimasukkan tidak valid.';
+      case 0:
+        return 'Tidak dapat terhubung ke server. Periksa koneksi Anda.';
+      default:
+        return e.message.isNotEmpty ? e.message : 'Terjadi kesalahan (${ e.statusCode}).';
+    }
   }
 
   @override
@@ -327,21 +389,23 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                       height: 52,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(14),
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF2A6DEC), Color(0xFF1B5CE3)],
+                        gradient: LinearGradient(
+                          colors: _loading
+                              ? [const Color(0xFF8AAEE8), const Color(0xFF7A9FE0)]
+                              : [const Color(0xFF2A6DEC), const Color(0xFF1B5CE3)],
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF1B65EC).withValues(alpha: 0.3),
-                            blurRadius: 16,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
+                        boxShadow: _loading
+                            ? []
+                            : [
+                                BoxShadow(
+                                  color: const Color(0xFF1B65EC).withValues(alpha: 0.3),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
                       ),
-                      child: FilledButton.icon(
-                        onPressed: _submit,
-                        icon: const Icon(Icons.login_rounded, size: 18),
-                        label: const Text('Masuk'),
+                      child: FilledButton(
+                        onPressed: _loading ? null : _submit,
                         style: FilledButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           foregroundColor: Colors.white,
@@ -354,6 +418,23 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
+                        child: _loading
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.login_rounded, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('Masuk'),
+                                ],
+                              ),
                       ),
                     ),
                     const SizedBox(height: 22),

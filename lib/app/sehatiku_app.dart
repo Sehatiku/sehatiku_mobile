@@ -4,7 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:sehatiku_mobile/app/sehatiku_shell.dart';
 import 'package:sehatiku_mobile/core/theme/app_colors.dart';
+import 'package:sehatiku_mobile/data/repositories/auth_store.dart';
 import 'package:sehatiku_mobile/data/repositories/health_store.dart';
+import 'package:sehatiku_mobile/data/models/auth_models.dart';
 
 class SehatikuApp extends StatefulWidget {
   const SehatikuApp({super.key});
@@ -16,17 +18,30 @@ class SehatikuApp extends StatefulWidget {
 class _SehatikuAppState extends State<SehatikuApp> {
   final HealthStore _store = HealthStore();
   bool _darkMode = false; // default light
+  bool _authLoaded = false;
+  Session? _initialSession;
 
   @override
   void initState() {
     super.initState();
     _store.load();
     _loadThemePref();
+    _loadAuth();
   }
 
   Future<void> _loadThemePref() async {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) setState(() => _darkMode = prefs.getBool('darkMode') ?? false);
+  }
+
+  Future<void> _loadAuth() async {
+    await AuthStore.instance.load();
+    if (mounted) {
+      setState(() {
+        _initialSession = AuthStore.instance.session;
+        _authLoaded = true;
+      });
+    }
   }
 
   Future<void> _setDarkMode(bool value) async {
@@ -130,17 +145,33 @@ class _SehatikuAppState extends State<SehatikuApp> {
 
   @override
   Widget build(BuildContext context) {
+    // Block rendering until auth state is resolved to avoid a flash to login.
+    if (!_authLoaded) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        themeMode: _darkMode ? ThemeMode.dark : ThemeMode.light,
+        theme: _buildLight(),
+        darkTheme: _buildDark(),
+        home: const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
     return MaterialApp(
       title: 'Sehatiku',
       debugShowCheckedModeBanner: false,
       themeMode: _darkMode ? ThemeMode.dark : ThemeMode.light,
       theme: _buildLight(),
       darkTheme: _buildDark(),
-      home: HealthScope(
-        store: _store,
-        child: SehatikuShell(
-          darkMode: _darkMode,
-          onDarkMode: _setDarkMode,
+      home: AuthScope(
+        child: HealthScope(
+          store: _store,
+          child: SehatikuShell(
+            darkMode: _darkMode,
+            onDarkMode: _setDarkMode,
+            initialSession: _initialSession,
+          ),
         ),
       ),
     );

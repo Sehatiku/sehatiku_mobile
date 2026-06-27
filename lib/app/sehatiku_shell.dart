@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:sehatiku_mobile/core/core.dart';
+import 'package:sehatiku_mobile/data/models/auth_models.dart';
+import 'package:sehatiku_mobile/data/services/auth_service.dart';
 import 'package:sehatiku_mobile/features/auth/login_screen.dart';
 import 'package:sehatiku_mobile/features/home/app_home.dart';
 import 'package:sehatiku_mobile/features/onboarding/onboarding_screen.dart';
@@ -13,10 +15,13 @@ class SehatikuShell extends StatefulWidget {
     super.key,
     required this.darkMode,
     required this.onDarkMode,
+    /// Pass a non-null session when restoring a persisted login on cold start.
+    this.initialSession,
   });
 
   final bool darkMode;
   final ValueChanged<bool> onDarkMode;
+  final Session? initialSession;
 
   @override
   State<SehatikuShell> createState() => _SehatikuShellState();
@@ -25,7 +30,9 @@ class SehatikuShell extends StatefulWidget {
 class _SehatikuShellState extends State<SehatikuShell> {
   Timer? _splashTimer;
 
-  Stage _stage = Stage.splash;
+  late Stage _stage;
+  Session? _session;
+
   MainView _view = MainView.beranda;
   int _onboardingIndex = 0;
   int _progressIndex = 0;
@@ -36,11 +43,23 @@ class _SehatikuShellState extends State<SehatikuShell> {
   @override
   void initState() {
     super.initState();
+    _session = widget.initialSession;
+
     _splashTimer = Timer(const Duration(milliseconds: 2600), () {
       if (mounted && _stage == Stage.splash) {
-        setState(() => _stage = Stage.onboarding);
+        setState(() {
+          if (_session != null) {
+            // Already logged in — skip onboarding and go straight to app.
+            _stage = Stage.app;
+          } else {
+            _stage = Stage.onboarding;
+          }
+        });
       }
     });
+
+    // Initialise stage — splash always shows first.
+    _stage = Stage.splash;
   }
 
   @override
@@ -63,10 +82,21 @@ class _SehatikuShellState extends State<SehatikuShell> {
       );
   }
 
-  void _enterApp() {
+  void _onLogin(Session session) {
     FocusScope.of(context).unfocus();
     setState(() {
+      _session = session;
       _stage = Stage.app;
+      _view = MainView.beranda;
+    });
+  }
+
+  Future<void> _onLogout() async {
+    await AuthService.instance.logout();
+    if (!mounted) return;
+    setState(() {
+      _session = null;
+      _stage = Stage.login;
       _view = MainView.beranda;
     });
   }
@@ -93,8 +123,9 @@ class _SehatikuShellState extends State<SehatikuShell> {
               }
             },
           ),
-          Stage.login => LoginScreen(onLogin: _enterApp),
+          Stage.login => LoginScreen(onLogin: _onLogin),
           Stage.app => AppHome(
+            session: _session,
             view: _view,
             progressIndex: _progressIndex,
             rangeIndex: _rangeIndex,
@@ -109,10 +140,7 @@ class _SehatikuShellState extends State<SehatikuShell> {
                 setState(() => _educationFilter = value),
             onDarkMode: widget.onDarkMode,
             onAction: _showSnack,
-            onLogout: () => setState(() {
-              _stage = Stage.login;
-              _view = MainView.beranda;
-            }),
+            onLogout: _onLogout,
           ),
         },
       ),

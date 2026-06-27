@@ -1,0 +1,172 @@
+/// Typed response models for GET /api/v1/patients/dashboard
+library;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sub-models
+// ─────────────────────────────────────────────────────────────────────────────
+
+class DashboardProfile {
+  const DashboardProfile({
+    required this.fullName,
+    required this.age,
+    required this.diseaseType,
+  });
+
+  final String fullName;
+  final int age;
+
+  /// 'diabetes_t2' | 'hypertension' | 'both'
+  final String diseaseType;
+
+  factory DashboardProfile.fromJson(Map<String, dynamic> json) =>
+      DashboardProfile(
+        fullName: json['full_name'] as String,
+        age: json['age'] as int,
+        diseaseType: json['disease_type'] as String,
+      );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+class DashboardRisk {
+  const DashboardRisk({
+    required this.score,
+    required this.riskLabel,
+    required this.status,
+    required this.mainFactor,
+    this.scoredAt,
+  });
+
+  final int score;
+
+  /// 'kritis' | 'sedang' | 'rendah'
+  final String riskLabel;
+
+  /// 'bahaya' | 'waswas' | 'aman'
+  final String status;
+
+  /// Indonesian label for top SHAP factor, empty if no score yet.
+  final String mainFactor;
+
+  /// ISO 8601 — null if no score yet.
+  final String? scoredAt;
+
+  factory DashboardRisk.fromJson(Map<String, dynamic> json) => DashboardRisk(
+        score: json['score'] as int,
+        riskLabel: json['risk_label'] as String,
+        status: json['status'] as String,
+        mainFactor: json['main_factor'] as String? ?? '',
+        scoredAt: json['scored_at'] as String?,
+      );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+class GlucoseMeasurement {
+  const GlucoseMeasurement({required this.value, required this.measuredAt});
+
+  final int value;
+  final String measuredAt;
+
+  factory GlucoseMeasurement.fromJson(Map<String, dynamic> json) =>
+      GlucoseMeasurement(
+        value: json['value'] as int,
+        measuredAt: json['measured_at'] as String,
+      );
+}
+
+class BloodPressureMeasurement {
+  const BloodPressureMeasurement({
+    required this.systolic,
+    required this.diastolic,
+    required this.measuredAt,
+  });
+
+  final int systolic;
+  final int diastolic;
+  final String measuredAt;
+
+  factory BloodPressureMeasurement.fromJson(Map<String, dynamic> json) =>
+      BloodPressureMeasurement(
+        systolic: json['systolic'] as int,
+        diastolic: json['diastolic'] as int,
+        measuredAt: json['measured_at'] as String,
+      );
+}
+
+class LatestMeasurements {
+  const LatestMeasurements({this.glucose, this.bloodPressure});
+
+  /// null if no glucose log yet.
+  final GlucoseMeasurement? glucose;
+
+  /// null if no blood pressure log yet.
+  final BloodPressureMeasurement? bloodPressure;
+
+  factory LatestMeasurements.fromJson(Map<String, dynamic> json) {
+    final g = json['glucose'];
+    final bp = json['blood_pressure'];
+    return LatestMeasurements(
+      glucose: g != null
+          ? GlucoseMeasurement.fromJson(g as Map<String, dynamic>)
+          : null,
+      bloodPressure: bp != null
+          ? BloodPressureMeasurement.fromJson(bp as Map<String, dynamic>)
+          : null,
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+class DashboardLogging {
+  const DashboardLogging({
+    required this.loggedToday,
+    required this.streakDays,
+  });
+
+  final bool loggedToday;
+  final int streakDays;
+
+  factory DashboardLogging.fromJson(Map<String, dynamic> json) =>
+      DashboardLogging(
+        loggedToday: json['logged_today'] as bool,
+        streakDays: json['streak_days'] as int,
+      );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Root response
+// ─────────────────────────────────────────────────────────────────────────────
+
+class PatientDashboard {
+  const PatientDashboard({
+    required this.profile,
+    required this.risk,
+    required this.latestMeasurements,
+    required this.logging,
+    required this.recommendations,
+  });
+
+  final DashboardProfile profile;
+  final DashboardRisk risk;
+  final LatestMeasurements latestMeasurements;
+  final DashboardLogging logging;
+  final List<String> recommendations;
+
+  factory PatientDashboard.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] as Map<String, dynamic>;
+    return PatientDashboard(
+      profile: DashboardProfile.fromJson(
+          data['profile'] as Map<String, dynamic>),
+      risk: DashboardRisk.fromJson(data['risk'] as Map<String, dynamic>),
+      latestMeasurements: LatestMeasurements.fromJson(
+          data['latest_measurements'] as Map<String, dynamic>),
+      logging: DashboardLogging.fromJson(
+          data['logging'] as Map<String, dynamic>),
+      recommendations: (data['recommendations'] as List<dynamic>)
+          .map((e) => e as String)
+          .toList(),
+    );
+  }
+}
