@@ -1,8 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:sehatiku_mobile/models/app_models.dart';
-import 'package:sehatiku_mobile/screens/sehatiku_screens.dart';
+
+import 'package:sehatiku_mobile/core/core.dart';
+import 'package:sehatiku_mobile/features/auth/login_screen.dart';
+import 'package:sehatiku_mobile/features/home/app_home.dart';
+import 'package:sehatiku_mobile/features/onboarding/onboarding_screen.dart';
+import 'package:sehatiku_mobile/features/splash/splash_screen.dart';
 
 class SehatikuShell extends StatefulWidget {
   const SehatikuShell({super.key});

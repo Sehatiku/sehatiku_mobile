@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+/// Central brand palette for Sehatiku. Keep all raw colour values here so the
+/// rest of the app references semantic names rather than hex literals.
 class AppColors {
   static const primary = Color(0xFF1565D8);
   static const primary2 = Color(0xFF1F86D6);
