@@ -23,6 +23,7 @@ class InputCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return AppCard(
       padding: 20,
       child: Column(
@@ -35,7 +36,7 @@ class InputCard extends StatelessWidget {
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: iconBg ?? AppColors.pale,
+                    color: iconBg ?? c.elevated,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -48,8 +49,8 @@ class InputCard extends StatelessWidget {
               ],
               Text(
                 title,
-                style: const TextStyle(
-                  color: AppColors.text,
+                style: TextStyle(
+                  color: c.text,
                   fontWeight: FontWeight.w800,
                   fontSize: 15.5,
                 ),
@@ -80,22 +81,23 @@ class HealthField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.pale,
+        color: c.elevated,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
-          Icon(icon, color: AppColors.primary),
+          const Icon(Icons.water_drop_rounded, color: AppColors.primary),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(
-                color: AppColors.text,
+              style: TextStyle(
+                color: c.text,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -129,14 +131,15 @@ class SelectChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppColors.primary : AppColors.muted;
+    final c = AppColors.of(context);
+    final color = selected ? AppColors.primary : c.muted;
     return InkWell(
       borderRadius: BorderRadius.circular(14),
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFEAF2FE) : AppColors.pale,
+          color: selected ? AppColors.primary.withValues(alpha: .18) : c.elevated,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: selected ? AppColors.primary : Colors.transparent,
@@ -178,13 +181,14 @@ class TwoChoice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Row(
       children: [
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(
-              color: AppColors.text,
+            style: TextStyle(
+              color: c.text,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -215,16 +219,16 @@ class SegmentedPills extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     final n = labels.length;
     return Container(
       padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
-        color: AppColors.pale,
+        color: c.elevated,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Stack(
         children: [
-          // Sliding highlight that animates between segments.
           Positioned.fill(
             child: AnimatedAlign(
               duration: const Duration(milliseconds: 320),
@@ -272,7 +276,7 @@ class SegmentedPills extends StatelessWidget {
                       duration: const Duration(milliseconds: 260),
                       curve: Curves.easeOut,
                       style: TextStyle(
-                        color: isSelected ? Colors.white : AppColors.muted,
+                        color: isSelected ? Colors.white : c.muted,
                         fontWeight: FontWeight.w800,
                         fontSize: 13,
                       ),
@@ -309,10 +313,11 @@ class SegmentedMini extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: light ? Colors.white.withValues(alpha: .18) : AppColors.pale,
+        color: light ? Colors.white.withValues(alpha: .18) : c.elevated,
         borderRadius: BorderRadius.circular(13),
       ),
       child: Row(
@@ -324,7 +329,9 @@ class SegmentedMini extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.white : Colors.transparent,
+                color: isSelected
+                    ? (light ? Colors.white : c.background)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
@@ -334,7 +341,7 @@ class SegmentedMini extends StatelessWidget {
                       ? AppColors.primary
                       : light
                       ? Colors.white
-                      : AppColors.muted,
+                      : c.muted,
                   fontSize: 11.5,
                   fontWeight: FontWeight.w800,
                 ),
@@ -365,6 +372,7 @@ class NumberField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return TextField(
       controller: controller,
       keyboardType: TextInputType.numberWithOptions(decimal: allowDecimal),
@@ -373,38 +381,38 @@ class NumberField extends StatelessWidget {
           allowDecimal ? RegExp(r'[0-9.,]') : RegExp(r'[0-9]'),
         ),
       ],
-      style: const TextStyle(
-        color: AppColors.text,
+      style: TextStyle(
+        color: c.text,
         fontSize: 26,
         fontWeight: FontWeight.w800,
       ),
       decoration: InputDecoration(
         isDense: true,
         hintText: hint,
-        hintStyle: const TextStyle(
-          color: Color(0xFFB6C3D2),
+        hintStyle: TextStyle(
+          color: c.muted,
           fontSize: 26,
           fontWeight: FontWeight.w800,
         ),
         suffixText: unit,
-        suffixStyle: const TextStyle(
-          color: Color(0xFF9AA9BB),
+        suffixStyle: TextStyle(
+          color: c.muted,
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
         filled: true,
-        fillColor: AppColors.pale,
+        fillColor: c.elevated,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 14,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.line),
+          borderSide: BorderSide(color: c.line),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.line),
+          borderSide: BorderSide(color: c.line),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -415,7 +423,6 @@ class NumberField extends StatelessWidget {
   }
 }
 
-/// Editable numeric field with a caption label above it.
 class LabeledNumberField extends StatelessWidget {
   const LabeledNumberField({
     super.key,
@@ -432,13 +439,14 @@ class LabeledNumberField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: AppColors.muted,
+          style: TextStyle(
+            color: c.muted,
             fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
@@ -448,32 +456,32 @@ class LabeledNumberField extends StatelessWidget {
           controller: controller,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          style: const TextStyle(
-            color: AppColors.text,
+          style: TextStyle(
+            color: c.text,
             fontSize: 22,
             fontWeight: FontWeight.w800,
           ),
           decoration: InputDecoration(
             isDense: true,
             hintText: hint,
-            hintStyle: const TextStyle(
-              color: Color(0xFFB6C3D2),
+            hintStyle: TextStyle(
+              color: c.muted,
               fontSize: 22,
               fontWeight: FontWeight.w800,
             ),
             filled: true,
-            fillColor: AppColors.pale,
+            fillColor: c.elevated,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 14,
               vertical: 13,
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: AppColors.line),
+              borderSide: BorderSide(color: c.line),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: AppColors.line),
+              borderSide: BorderSide(color: c.line),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
@@ -482,133 +490,6 @@ class LabeledNumberField extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Plus/minus stepper for an activity duration in 15-minute increments.
-class Stepper15 extends StatelessWidget {
-  const Stepper15({super.key, required this.minutes, required this.onChanged});
-
-  final int minutes;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.pale,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _StepButton(
-            icon: Icons.remove_rounded,
-            onTap: minutes <= 0
-                ? null
-                : () => onChanged((minutes - 15).clamp(0, 600)),
-          ),
-          SizedBox(
-            width: 78,
-            child: Text(
-              '$minutes menit',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.text,
-                fontWeight: FontWeight.w800,
-                fontSize: 14,
-              ),
-            ),
-          ),
-          _StepButton(
-            icon: Icons.add_rounded,
-            onTap: () => onChanged((minutes + 15).clamp(0, 600)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StepButton extends StatelessWidget {
-  const _StepButton({required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onTap != null;
-    return InkWell(
-      borderRadius: BorderRadius.circular(11),
-      onTap: onTap,
-      child: Container(
-        width: 34,
-        height: 34,
-        decoration: BoxDecoration(
-          color: enabled ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(11),
-        ),
-        child: Icon(
-          icon,
-          size: 19,
-          color: enabled ? AppColors.primary : const Color(0xFFC2CEDB),
-        ),
-      ),
-    );
-  }
-}
-
-class ActivityTile extends StatelessWidget {
-  const ActivityTile({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = selected ? AppColors.primary : AppColors.muted;
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 13),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFFEAF2FE) : AppColors.pale,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? AppColors.primary : Colors.transparent,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 19),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13.5,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -629,13 +510,14 @@ class StressTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFFFF8E6) : AppColors.pale,
+          color: selected ? AppColors.amber.withValues(alpha: .18) : c.elevated,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: selected ? AppColors.amber : Colors.transparent,
@@ -648,7 +530,7 @@ class StressTile extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                color: selected ? const Color(0xFFB07900) : AppColors.muted,
+                color: selected ? AppColors.amber : c.muted,
                 fontWeight: FontWeight.w700,
                 fontSize: 12,
               ),
@@ -674,6 +556,7 @@ class YesNoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return AppCard(
       padding: 18,
       child: Column(
@@ -681,8 +564,8 @@ class YesNoCard extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: AppColors.muted,
+            style: TextStyle(
+              color: c.muted,
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
@@ -695,7 +578,7 @@ class YesNoCard extends StatelessWidget {
                   text: 'Ya',
                   active: value,
                   activeColor: AppColors.red,
-                  activeBg: const Color(0xFFFFEEF0),
+                  activeBg: AppColors.red.withValues(alpha: .18),
                   onTap: () => onChanged(true),
                 ),
               ),
@@ -704,8 +587,8 @@ class YesNoCard extends StatelessWidget {
                 child: _YesNoButton(
                   text: 'Tidak',
                   active: !value,
-                  activeColor: const Color(0xFF5A9E2E),
-                  activeBg: const Color(0xFFE7F7EC),
+                  activeColor: AppColors.green,
+                  activeBg: AppColors.green.withValues(alpha: .18),
                   onTap: () => onChanged(false),
                 ),
               ),
@@ -734,6 +617,7 @@ class _YesNoButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return InkWell(
       borderRadius: BorderRadius.circular(11),
       onTap: onTap,
@@ -741,14 +625,14 @@ class _YesNoButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 9),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: active ? activeBg : AppColors.pale,
+          color: active ? activeBg : c.elevated,
           borderRadius: BorderRadius.circular(11),
           border: Border.all(color: active ? activeColor : Colors.transparent),
         ),
         child: Text(
           text,
           style: TextStyle(
-            color: active ? activeColor : AppColors.muted,
+            color: active ? activeColor : c.muted,
             fontWeight: FontWeight.w700,
             fontSize: 12.5,
           ),
@@ -774,6 +658,7 @@ class PillTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return InkWell(
       borderRadius: BorderRadius.circular(14),
       onTap: onTap,
@@ -786,14 +671,14 @@ class PillTab extends StatelessWidget {
                   colors: [AppColors.primary, AppColors.primary2],
                 )
               : null,
-          color: selected ? null : Colors.white,
+          color: selected ? null : c.elevated,
           borderRadius: BorderRadius.circular(14),
-          border: selected ? null : Border.all(color: AppColors.line),
+          border: selected ? null : Border.all(color: c.line),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: selected ? Colors.white : AppColors.muted,
+            color: selected ? Colors.white : c.muted,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
             fontSize: compact ? 12.5 : 13,
           ),
@@ -802,4 +687,3 @@ class PillTab extends StatelessWidget {
     );
   }
 }
-

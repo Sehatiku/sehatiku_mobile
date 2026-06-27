@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sehatiku_mobile/core/core.dart';
 
 /// Small solid status dot used inside badges and pills.
 class Dot extends StatelessWidget {
@@ -47,11 +48,12 @@ class BrandLogo extends StatelessWidget {
               border: Border.all(color: Colors.white.withValues(alpha: .4)),
             )
           : BoxDecoration(
-              color: Colors.white,
+              color: AppColors.of(context).elevated,
               borderRadius: BorderRadius.circular(r),
+              border: Border.all(color: AppColors.of(context).line),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0x1F0B2545),
+                  color: const Color(0x40000000),
                   blurRadius: size * 0.22,
                   offset: Offset(0, size * 0.08),
                 ),

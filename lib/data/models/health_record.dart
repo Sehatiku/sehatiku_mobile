@@ -7,14 +7,19 @@ import 'package:sehatiku_mobile/core/theme/app_colors.dart';
 class HealthRecord {
   HealthRecord({
     required this.date,
+    // Physiological
     this.bloodSugar,
+    this.bloodSugarTag = '',
     this.systolic,
     this.diastolic,
     this.weight,
     this.medicineTaken = false,
+    // Lifestyle
     Set<String>? meals,
-    this.activity = 'none',
-    this.activityMinutes = 0,
+    this.portion = '',
+    this.active30 = false,
+    this.sleepHours,
+    this.sleepQuality = 1,
     this.stressIndex = 1,
     this.smoke = false,
     this.alcohol = false,
@@ -23,14 +28,35 @@ class HealthRecord {
 
   /// Always normalised to midnight so one record maps to one calendar day.
   final DateTime date;
+
+  // --- Physiological ---
   final int? bloodSugar;
+
+  /// Measurement timing tag for [bloodSugar], e.g. 'puasa', 'sesudah_makan'.
+  /// Empty when not specified. See `bloodSugarTagLabels`.
+  final String bloodSugarTag;
   final int? systolic;
   final int? diastolic;
   final double? weight;
   final bool medicineTaken;
+
+  // --- Lifestyle (daily quick choices) ---
+
+  /// Food categories eaten today. See `foodCategories`.
   final Set<String> meals;
-  final String activity;
-  final int activityMinutes;
+
+  /// Portion size key, e.g. 'sedang'. Empty when not specified.
+  final String portion;
+
+  /// Whether the user did ≥30 minutes of physical activity today.
+  final bool active30;
+
+  /// Sleep duration in hours; null when not logged.
+  final double? sleepHours;
+
+  /// Sleep quality, indexed 0..2 (Buruk/Cukup/Nyenyak).
+  final int sleepQuality;
+
   final int stressIndex;
   final bool smoke;
   final bool alcohol;
@@ -68,7 +94,23 @@ class HealthRecord {
     }
 
     if (!medicineTaken) s -= 15;
-    if (activity == 'none' || activityMinutes == 0) s -= 8;
+    if (!active30) s -= 8;
+
+    // Sleep only counts when the user actually logged a duration.
+    final sh = sleepHours;
+    if (sh != null) {
+      if (sh < 6) {
+        s -= 8;
+      } else if (sh > 9) {
+        s -= 4;
+      }
+      if (sleepQuality == 0) {
+        s -= 6;
+      } else if (sleepQuality == 1) {
+        s -= 2;
+      }
+    }
+
     if (stressIndex == 2) {
       s -= 8;
     } else if (stressIndex == 1) {
@@ -110,13 +152,16 @@ class HealthRecord {
 
   HealthRecord copyWith({
     int? bloodSugar,
+    String? bloodSugarTag,
     int? systolic,
     int? diastolic,
     double? weight,
     bool? medicineTaken,
     Set<String>? meals,
-    String? activity,
-    int? activityMinutes,
+    String? portion,
+    bool? active30,
+    double? sleepHours,
+    int? sleepQuality,
     int? stressIndex,
     bool? smoke,
     bool? alcohol,
@@ -125,13 +170,16 @@ class HealthRecord {
     return HealthRecord(
       date: date,
       bloodSugar: bloodSugar ?? this.bloodSugar,
+      bloodSugarTag: bloodSugarTag ?? this.bloodSugarTag,
       systolic: systolic ?? this.systolic,
       diastolic: diastolic ?? this.diastolic,
       weight: weight ?? this.weight,
       medicineTaken: medicineTaken ?? this.medicineTaken,
       meals: meals ?? this.meals,
-      activity: activity ?? this.activity,
-      activityMinutes: activityMinutes ?? this.activityMinutes,
+      portion: portion ?? this.portion,
+      active30: active30 ?? this.active30,
+      sleepHours: sleepHours ?? this.sleepHours,
+      sleepQuality: sleepQuality ?? this.sleepQuality,
       stressIndex: stressIndex ?? this.stressIndex,
       smoke: smoke ?? this.smoke,
       alcohol: alcohol ?? this.alcohol,
@@ -142,13 +190,16 @@ class HealthRecord {
   Map<String, dynamic> toJson() => {
     'date': date.toIso8601String(),
     'bloodSugar': bloodSugar,
+    'bloodSugarTag': bloodSugarTag,
     'systolic': systolic,
     'diastolic': diastolic,
     'weight': weight,
     'medicineTaken': medicineTaken,
     'meals': meals.toList(),
-    'activity': activity,
-    'activityMinutes': activityMinutes,
+    'portion': portion,
+    'active30': active30,
+    'sleepHours': sleepHours,
+    'sleepQuality': sleepQuality,
     'stressIndex': stressIndex,
     'smoke': smoke,
     'alcohol': alcohol,
@@ -159,6 +210,7 @@ class HealthRecord {
     return HealthRecord(
       date: dayOf(DateTime.parse(json['date'] as String)),
       bloodSugar: json['bloodSugar'] as int?,
+      bloodSugarTag: json['bloodSugarTag'] as String? ?? '',
       systolic: json['systolic'] as int?,
       diastolic: json['diastolic'] as int?,
       weight: (json['weight'] as num?)?.toDouble(),
@@ -166,8 +218,13 @@ class HealthRecord {
       meals: (json['meals'] as List<dynamic>? ?? const [])
           .map((e) => e as String)
           .toSet(),
-      activity: json['activity'] as String? ?? 'none',
-      activityMinutes: json['activityMinutes'] as int? ?? 0,
+      portion: json['portion'] as String? ?? '',
+      // Migrate legacy records that stored activity minutes instead of a flag.
+      active30:
+          json['active30'] as bool? ??
+          ((json['activityMinutes'] as int?) ?? 0) >= 30,
+      sleepHours: (json['sleepHours'] as num?)?.toDouble(),
+      sleepQuality: json['sleepQuality'] as int? ?? 1,
       stressIndex: json['stressIndex'] as int? ?? 1,
       smoke: json['smoke'] as bool? ?? false,
       alcohol: json['alcohol'] as bool? ?? false,

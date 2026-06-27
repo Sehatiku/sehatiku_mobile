@@ -26,19 +26,20 @@ class PageHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: const TextStyle(
-            color: AppColors.text,
+          style: TextStyle(
+            color: c.text,
             fontSize: 24,
             fontWeight: FontWeight.w800,
           ),
         ),
         const SizedBox(height: 4),
-        Text(subtitle, style: const TextStyle(color: AppColors.muted)),
+        Text(subtitle, style: TextStyle(color: c.muted)),
       ],
     );
   }
@@ -91,6 +92,7 @@ class DetailScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return AppScroll(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -102,8 +104,8 @@ class DetailScaffold extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
-                    color: AppColors.text,
+                  style: TextStyle(
+                    color: c.text,
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
                   ),
@@ -126,14 +128,14 @@ class SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Text(
       title,
-      style: const TextStyle(
-        color: AppColors.text,
+      style: TextStyle(
+        color: c.text,
         fontSize: 16,
         fontWeight: FontWeight.w800,
       ),
     );
   }
 }
-

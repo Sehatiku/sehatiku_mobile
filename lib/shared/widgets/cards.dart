@@ -107,24 +107,20 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: c.surface,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFEEF4FB)),
+        border: Border.all(color: c.line),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x141565D8),
+            color: Color(0x18000000),
             blurRadius: 24,
             offset: Offset(0, 12),
             spreadRadius: -4,
-          ),
-          BoxShadow(
-            color: Color(0x0A1565D8),
-            blurRadius: 3,
-            offset: Offset(0, 1),
           ),
         ],
       ),
@@ -153,6 +149,7 @@ class MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return InkWell(
       borderRadius: BorderRadius.circular(18),
       onTap: onTap,
@@ -179,8 +176,8 @@ class MetricCard extends StatelessWidget {
                     label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.muted,
+                    style: TextStyle(
+                      color: c.muted,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),
@@ -191,8 +188,8 @@ class MetricCard extends StatelessWidget {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       value,
-                      style: const TextStyle(
-                        color: AppColors.text,
+                      style: TextStyle(
+                        color: c.text,
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
                       ),
@@ -202,10 +199,7 @@ class MetricCard extends StatelessWidget {
                     unit,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 11,
-                    ),
+                    style: TextStyle(color: c.muted, fontSize: 11),
                   ),
                 ],
               ),
@@ -231,6 +225,7 @@ class QuickAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return SizedBox(
       width: (MediaQuery.sizeOf(context).width - 64) / 4,
       child: InkWell(
@@ -242,24 +237,18 @@ class QuickAction extends StatelessWidget {
               width: 58,
               height: 58,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: c.elevated,
                 borderRadius: BorderRadius.circular(18),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x1A1565D8),
-                    blurRadius: 18,
-                    offset: Offset(0, 8),
-                  ),
-                ],
+                border: Border.all(color: c.line),
               ),
-              child: Icon(icon, color: AppColors.primary, size: 28),
+              child: const Icon(Icons.add, color: AppColors.primary, size: 28),
             ),
             const SizedBox(height: 8),
             FittedBox(
               child: Text(
                 label,
-                style: const TextStyle(
-                  color: AppColors.text,
+                style: TextStyle(
+                  color: c.text,
                   fontWeight: FontWeight.w700,
                   fontSize: 12,
                 ),
@@ -296,6 +285,7 @@ class SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return AppCard(
       padding: 16,
       child: Column(
@@ -310,8 +300,8 @@ class SummaryCard extends StatelessWidget {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.muted,
+                  style: TextStyle(
+                    color: c.muted,
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
                   ),
@@ -331,8 +321,8 @@ class SummaryCard extends StatelessWidget {
                 ],
                 Text(
                   value,
-                  style: const TextStyle(
-                    color: AppColors.text,
+                  style: TextStyle(
+                    color: c.text,
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
                   ),
@@ -341,8 +331,8 @@ class SummaryCard extends StatelessWidget {
                   const SizedBox(width: 3),
                   Text(
                     unit!,
-                    style: const TextStyle(
-                      color: Color(0xFF9AA9BB),
+                    style: TextStyle(
+                      color: c.muted,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -381,6 +371,7 @@ class BigAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return InkWell(
       borderRadius: BorderRadius.circular(22),
       onTap: onTap,
@@ -408,8 +399,8 @@ class BigAction extends StatelessWidget {
             ),
             Text(
               label,
-              style: const TextStyle(
-                color: AppColors.text,
+              style: TextStyle(
+                color: c.text,
                 fontWeight: FontWeight.w700,
                 fontSize: 14.5,
               ),
@@ -421,8 +412,6 @@ class BigAction extends StatelessWidget {
   }
 }
 
-/// A large editable numeric field with a trailing unit, styled to match the
-/// record screen cards.
 class StatBox extends StatelessWidget {
   const StatBox({
     super.key,
@@ -439,6 +428,7 @@ class StatBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return AppCard(
       padding: 17,
       child: Column(
@@ -447,8 +437,8 @@ class StatBox extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: AppColors.muted,
+            style: TextStyle(
+              color: c.muted,
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
@@ -479,4 +469,3 @@ class StatBox extends StatelessWidget {
     );
   }
 }
-

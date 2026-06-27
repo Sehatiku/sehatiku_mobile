@@ -14,6 +14,7 @@ class DashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = HealthScope.of(context);
+    final colors = AppColors.of(context);
     final latest = store.latest;
     final today = store.today;
     final hasData = latest != null;
@@ -40,7 +41,7 @@ class DashboardScreen extends StatelessWidget {
                     end: Alignment.bottomRight,
                     colors: [AppColors.violet, AppColors.cyan],
                   ),
-                  border: Border.all(color: Colors.white, width: 2),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: .6), width: 2),
                   boxShadow: [
                     BoxShadow(
                       color: AppColors.violet.withValues(alpha: .35),
@@ -65,15 +66,15 @@ class DashboardScreen extends StatelessWidget {
                   children: [
                     Text(
                       '${greeting()},',
-                      style: const TextStyle(
-                        color: AppColors.muted,
+                      style: TextStyle(
+                        color: colors.muted,
                         fontSize: 13,
                       ),
                     ),
-                    const Text(
+                    Text(
                       'Lavinia 👋',
                       style: TextStyle(
-                        color: AppColors.text,
+                        color: colors.text,
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
                       ),
@@ -96,7 +97,7 @@ class DashboardScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: AppColors.red,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
+                        border: Border.all(color: colors.background, width: 2),
                       ),
                     ),
                   ),
@@ -167,7 +168,7 @@ class DashboardScreen extends StatelessWidget {
                       : '—',
                   unit: 'kg',
                   status: 'Tercatat',
-                  statusColor: AppColors.muted,
+                  statusColor: colors.muted,
                   iconColor: AppColors.violet,
                 ),
                 SummaryCard(
@@ -315,7 +316,7 @@ class DashboardScreen extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF3E0),
+                    color: AppColors.orange.withValues(alpha: .16),
                     borderRadius: BorderRadius.circular(15),
                   ),
                   child: const Icon(
@@ -324,23 +325,23 @@ class DashboardScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 14),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Minum Obat Metformin',
                         style: TextStyle(
-                          color: AppColors.text,
+                          color: colors.text,
                           fontWeight: FontWeight.w700,
                           fontSize: 14.5,
                         ),
                       ),
-                      SizedBox(height: 2),
+                      const SizedBox(height: 2),
                       Text(
                         'Hari ini, pukul 09.00',
                         style: TextStyle(
-                          color: AppColors.muted,
+                          color: colors.muted,
                           fontSize: 12.5,
                         ),
                       ),
@@ -353,7 +354,7 @@ class DashboardScreen extends StatelessWidget {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEAF2FE),
+                    color: AppColors.primary.withValues(alpha: .16),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Text(
@@ -379,8 +380,8 @@ class DashboardScreen extends StatelessWidget {
                     Expanded(
                       child: Text(
                         'Gula Darah · ${bsValues.length} catatan',
-                        style: const TextStyle(
-                          color: AppColors.text,
+                        style: TextStyle(
+                          color: colors.text,
                           fontWeight: FontWeight.w800,
                           fontSize: 14.5,
                         ),
@@ -419,8 +420,8 @@ class DashboardScreen extends StatelessWidget {
                         .map(
                           (r) => Text(
                             dayName(r.date).substring(0, 3),
-                            style: const TextStyle(
-                              color: Color(0xFF9AA9BB),
+                            style: TextStyle(
+                              color: colors.muted,
                               fontSize: 10.5,
                               fontWeight: FontWeight.w600,
                             ),
@@ -437,10 +438,8 @@ class DashboardScreen extends StatelessWidget {
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
-              gradient: const LinearGradient(
-                colors: [Color(0xFFDFF3EC), Color(0xFFEAF2FE)],
-              ),
-              border: Border.all(color: AppColors.green.withValues(alpha: .12)),
+              color: colors.surface,
+              border: Border.all(color: AppColors.green.withValues(alpha: .22)),
             ),
             child: Stack(
               children: [
@@ -450,15 +449,15 @@ class DashboardScreen extends StatelessWidget {
                   child: Icon(
                     Icons.format_quote_rounded,
                     size: 36,
-                    color: AppColors.green.withValues(alpha: .3),
+                    color: AppColors.green.withValues(alpha: .35),
                   ),
                 ),
-                const Padding(
-                  padding: EdgeInsets.only(right: 24),
+                Padding(
+                  padding: const EdgeInsets.only(right: 24),
                   child: Text(
                     'Kesehatan adalah investasi terbaik untuk masa depan Anda.',
                     style: TextStyle(
-                      color: Color(0xFF1F5E4F),
+                      color: colors.text,
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       height: 1.55,
@@ -636,8 +635,6 @@ String _scoreInsight(int score) {
   return 'Beberapa indikator perlu diperhatikan. Tetap jaga pola hidup.';
 }
 
-
-
 /// Shown on the dashboard when no records exist yet.
 class _EmptyDataCard extends StatelessWidget {
   const _EmptyDataCard({required this.onView});
@@ -646,6 +643,7 @@ class _EmptyDataCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return AppCard(
       padding: 22,
       child: Column(
@@ -654,7 +652,7 @@ class _EmptyDataCard extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: const Color(0xFFEAF2FE),
+              color: AppColors.primary.withValues(alpha: .14),
               borderRadius: BorderRadius.circular(18),
             ),
             child: const Icon(
@@ -664,19 +662,19 @@ class _EmptyDataCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          const Text(
+          Text(
             'Belum ada catatan kesehatan',
             style: TextStyle(
-              color: AppColors.text,
+              color: colors.text,
               fontWeight: FontWeight.w800,
               fontSize: 15.5,
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Mulai catat gula darah, tekanan, dan obat harian Anda untuk melihat ringkasan dan skor di sini.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.muted, fontSize: 13, height: 1.5),
+            style: TextStyle(color: colors.muted, fontSize: 13, height: 1.5),
           ),
           const SizedBox(height: 16),
           PrimaryButton(
@@ -698,6 +696,7 @@ class _TodayPromptCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: () => onView(MainView.catatan),
@@ -709,7 +708,7 @@ class _TodayPromptCard extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: const Color(0xFFE7F7EC),
+                color: AppColors.green.withValues(alpha: .14),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: const Icon(
@@ -719,27 +718,27 @@ class _TodayPromptCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 13),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Belum mencatat hari ini',
                     style: TextStyle(
-                      color: AppColors.text,
+                      color: colors.text,
                       fontWeight: FontWeight.w800,
                       fontSize: 14.5,
                     ),
                   ),
-                  SizedBox(height: 2),
+                  const SizedBox(height: 2),
                   Text(
                     'Ketuk untuk mengisi catatan harian.',
-                    style: TextStyle(color: AppColors.muted, fontSize: 12.5),
+                    style: TextStyle(color: colors.muted, fontSize: 12.5),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: Color(0xFFC2CEDB)),
+            Icon(Icons.chevron_right_rounded, color: colors.muted),
           ],
         ),
       ),

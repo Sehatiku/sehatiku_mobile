@@ -26,10 +26,10 @@ class ProfileScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Profil Saya',
             style: TextStyle(
-              color: AppColors.text,
+              color: AppColors.of(context).text,
               fontSize: 24,
               fontWeight: FontWeight.w800,
             ),
@@ -137,26 +137,26 @@ class ProfileScreen extends StatelessWidget {
               children: [
                 _InfoRow(
                   icon: Icons.monitor_heart_rounded,
-                  iconBg: const Color(0xFFFFEEF2),
+                  iconBg: AppColors.tint(AppColors.pink),
                   iconColor: AppColors.pink,
                   label: 'Riwayat Penyakit',
                   value: 'Diabetes Tipe 2, Hipertensi',
                 ),
-                const Divider(color: Color(0xFFEEF3F9), height: 1),
+                Divider(color: AppColors.of(context).line, height: 1),
                 _InfoRow(
                   icon: Icons.emergency_rounded,
-                  iconBg: const Color(0xFFFFF3E0),
+                  iconBg: AppColors.tint(AppColors.orange),
                   iconColor: AppColors.orange,
                   label: 'Kontak Darurat',
                   value: 'Andi (Suami) · 0812-3456',
                 ),
-                const Divider(color: Color(0xFFEEF3F9), height: 1),
+                Divider(color: AppColors.of(context).line, height: 1),
                 InkWell(
                   borderRadius: BorderRadius.circular(14),
                   onTap: onDoctor,
                   child: _InfoRow(
                     icon: Icons.medical_services_rounded,
-                    iconBg: const Color(0xFFEAF2FE),
+                    iconBg: AppColors.tint(AppColors.primary),
                     iconColor: AppColors.primary,
                     label: 'Dokter Penanggung Jawab',
                     value: 'dr. Surya Wijaya, Sp.PD',
@@ -167,10 +167,10 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 22),
-          const Text(
+          Text(
             'PENGATURAN',
             style: TextStyle(
-              color: AppColors.muted,
+              color: AppColors.of(context).muted,
               fontWeight: FontWeight.w800,
               fontSize: 13,
               letterSpacing: .4,
@@ -186,38 +186,36 @@ class ProfileScreen extends StatelessWidget {
                   label: 'Privasi',
                   onTap: () => onAction('Pengaturan privasi tersedia.'),
                 ),
-                const Divider(color: Color(0xFFEEF3F9), height: 1),
+                Divider(color: AppColors.of(context).line, height: 1),
                 ProfileRow(
                   icon: Icons.security_rounded,
                   iconColor: AppColors.green,
                   label: 'Keamanan',
                   onTap: () => onAction('Pengaturan keamanan tersedia.'),
                 ),
-                const Divider(color: Color(0xFFEEF3F9), height: 1),
+                Divider(color: AppColors.of(context).line, height: 1),
                 ProfileRow(
                   icon: Icons.language_rounded,
                   iconColor: AppColors.violet,
                   label: 'Bahasa',
-                  trailing: const Text(
+                  trailing: Text(
                     'Indonesia',
                     style: TextStyle(
-                      color: AppColors.muted,
+                      color: AppColors.of(context).muted,
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
                     ),
                   ),
                   onTap: () => onAction('Bahasa: Indonesia.'),
                 ),
-                const Divider(color: Color(0xFFEEF3F9), height: 1),
+                Divider(color: AppColors.of(context).line, height: 1),
                 ProfileRow(
                   icon: Icons.dark_mode_rounded,
-                  iconColor: const Color(0xFF46586B),
+                  iconColor: AppColors.of(context).text,
                   label: 'Mode Gelap',
                   trailing: Switch(
                     value: darkMode,
                     onChanged: onDarkMode,
-                    activeThumbColor: Colors.white,
-                    activeTrackColor: AppColors.primary,
                   ),
                 ),
               ],
@@ -289,8 +287,8 @@ class _InfoRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
-                    color: AppColors.muted,
+                  style: TextStyle(
+                    color: AppColors.of(context).muted,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -298,8 +296,8 @@ class _InfoRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: const TextStyle(
-                    color: AppColors.text,
+                  style: TextStyle(
+                    color: AppColors.of(context).text,
                     fontWeight: FontWeight.w700,
                     fontSize: 14.5,
                   ),
@@ -308,7 +306,7 @@ class _InfoRow extends StatelessWidget {
             ),
           ),
           if (trailing)
-            const Icon(Icons.chevron_right_rounded, color: Color(0xFFC2CEDB)),
+            Icon(Icons.chevron_right_rounded, color: AppColors.of(context).muted),
         ],
       ),
     );

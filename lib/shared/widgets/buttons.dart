@@ -10,6 +10,7 @@ class IconCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return InkWell(
       borderRadius: BorderRadius.circular(14),
       onTap: onTap,
@@ -17,17 +18,11 @@ class IconCircle extends StatelessWidget {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: c.elevated,
           borderRadius: BorderRadius.circular(14),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x1A1565D8),
-              blurRadius: 18,
-              offset: Offset(0, 8),
-            ),
-          ],
+          border: Border.all(color: c.line),
         ),
-        child: Icon(icon, color: AppColors.text),
+        child: Icon(icon, color: c.text),
       ),
     );
   }
@@ -41,6 +36,7 @@ class FilledIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return InkWell(
       borderRadius: BorderRadius.circular(18),
       onTap: onTap,
@@ -48,8 +44,9 @@ class FilledIconButton extends StatelessWidget {
         width: 54,
         height: 54,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: c.elevated,
           borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: c.line),
         ),
         child: Icon(icon, color: AppColors.violet),
       ),
@@ -148,4 +145,3 @@ class FrostIcon extends StatelessWidget {
     );
   }
 }
-

@@ -2,8 +2,25 @@ import 'package:flutter/material.dart';
 
 import 'package:sehatiku_mobile/core/core.dart';
 import 'package:sehatiku_mobile/data/repositories/health_store.dart';
-
 import 'package:sehatiku_mobile/shared/widgets/widgets.dart';
+
+class _RecommendationItem {
+  const _RecommendationItem({
+    required this.icon,
+    required this.color,
+    required this.bg,
+    required this.title,
+    required this.desc,
+    required this.trailing,
+  });
+
+  final IconData icon;
+  final Color color;
+  final Color bg;
+  final String title;
+  final String desc;
+  final Widget trailing;
+}
 
 class AiScreen extends StatelessWidget {
   const AiScreen({
@@ -19,31 +36,177 @@ class AiScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     final foreLabel = const ['7 hari', '30 hari', '90 hari'][forecastIndex];
     final latest = HealthScope.of(context).latest;
+    final today = HealthScope.of(context).today;
     final risk = latest?.riskPercent ?? 0;
     final hasData = latest != null;
     final riskColor = !hasData
-        ? AppColors.muted
+        ? c.muted
         : risk < 15
-        ? AppColors.lime
-        : risk < 30
-        ? AppColors.amber
-        : AppColors.red;
+            ? AppColors.lime
+            : risk < 30
+                ? AppColors.amber
+                : AppColors.red;
     final riskLabel = !hasData
         ? 'Belum ada data'
         : risk < 15
-        ? 'Risiko Rendah'
-        : risk < 30
-        ? 'Risiko Sedang'
-        : 'Risiko Tinggi';
+            ? 'Risiko Rendah'
+            : risk < 30
+                ? 'Risiko Sedang'
+                : 'Risiko Tinggi';
     final riskDesc = !hasData
         ? 'Catat data harian Anda agar AI dapat memperkirakan risiko komplikasi.'
         : risk < 15
-        ? 'Indikator diabetes & hipertensi Anda terkendali dengan baik.'
-        : risk < 30
-        ? 'Beberapa indikator perlu diperhatikan minggu ini.'
-        : 'Beberapa indikator berisiko. Pertimbangkan konsultasi dengan dokter Anda.';
+            ? 'Indikator diabetes & hipertensi Anda terkendali dengan baik.'
+            : risk < 30
+                ? 'Beberapa indikator perlu diperhatikan minggu ini.'
+                : 'Beberapa indikator berisiko. Pertimbangkan konsultasi dengan dokter Anda.';
+
+    // Generate dynamic recommendations based on today's logged data in HealthStore
+    final List<_RecommendationItem> recommendationItems = [];
+
+    // 1. Blood Sugar Recommendation
+    if (today != null && today.bloodSugar != null) {
+      final bs = today.bloodSugar!;
+      if (bs >= 140) {
+        recommendationItems.add(_RecommendationItem(
+          icon: Icons.restaurant_rounded,
+          color: AppColors.orange,
+          bg: AppColors.tint(AppColors.orange),
+          title: 'Batasi gula & karbohidrat',
+          desc: 'Kadar gula darah hari ini tinggi ($bs mg/dL). Hindari makanan manis.',
+          trailing: const RecommendBadge(text: 'Penting', color: AppColors.orange),
+        ));
+      } else if (bs < 70) {
+        recommendationItems.add(_RecommendationItem(
+          icon: Icons.restaurant_rounded,
+          color: AppColors.red,
+          bg: AppColors.tint(AppColors.red),
+          title: 'Gula darah rendah ($bs mg/dL)',
+          desc: 'Konsumsi gula cepat serap seperti teh manis hangat atau madu.',
+          trailing: const RecommendBadge(text: 'Mendesak', color: AppColors.red),
+        ));
+      } else {
+        recommendationItems.add(_RecommendationItem(
+          icon: Icons.restaurant_rounded,
+          color: AppColors.lime,
+          bg: AppColors.tint(AppColors.lime),
+          title: 'Pola makan seimbang',
+          desc: 'Kadar gula darah terkontrol ($bs mg/dL). Pertahankan nutrisi ini.',
+          trailing: const RecommendCheck(),
+        ));
+      }
+    } else {
+      recommendationItems.add(_RecommendationItem(
+        icon: Icons.restaurant_rounded,
+        color: AppColors.lime,
+        bg: AppColors.tint(AppColors.lime),
+        title: 'Kurangi asupan garam',
+        desc: 'Maksimal 1 sendok teh per hari untuk kesehatan jantung.',
+        trailing: const RecommendCheck(),
+      ));
+    }
+
+    // 2. Blood Pressure Recommendation
+    if (today != null && today.systolic != null && today.diastolic != null) {
+      final sys = today.systolic!;
+      final dia = today.diastolic!;
+      if (sys >= 130 || dia >= 85) {
+        recommendationItems.add(_RecommendationItem(
+          icon: Icons.favorite_rounded,
+          color: AppColors.red,
+          bg: AppColors.tint(AppColors.red),
+          title: 'Batasi garam & rileks',
+          desc: 'Tekanan darah tinggi ($sys/$dia mmHg). Hindari stress hari ini.',
+          trailing: const RecommendBadge(text: 'Peringatan', color: AppColors.red),
+        ));
+      } else {
+        recommendationItems.add(_RecommendationItem(
+          icon: Icons.favorite_rounded,
+          color: AppColors.lime,
+          bg: AppColors.tint(AppColors.lime),
+          title: 'Tekanan darah stabil',
+          desc: 'Tekanan darah normal ($sys/$dia mmHg). Jaga hidrasi tubuh.',
+          trailing: const RecommendCheck(),
+        ));
+      }
+    } else {
+      recommendationItems.add(_RecommendationItem(
+        icon: Icons.water_drop_rounded,
+        color: AppColors.cyan,
+        bg: AppColors.tint(AppColors.cyan),
+        title: 'Minum 2 liter air',
+        desc: 'Sekitar 8 gelas hari ini untuk hidrasi optimal.',
+        trailing: const RecommendBadge(text: '5/8', color: AppColors.cyan),
+      ));
+    }
+
+    // 3. Physical Activity Recommendation
+    if (today != null) {
+      if (today.active30) {
+        recommendationItems.add(_RecommendationItem(
+          icon: Icons.directions_run_rounded,
+          color: AppColors.lime,
+          bg: AppColors.tint(AppColors.lime),
+          title: 'Target aktivitas tercapai',
+          desc: 'Hebat! Anda sudah aktif bergerak ≥30 menit hari ini.',
+          trailing: const RecommendCheck(),
+        ));
+      } else {
+        recommendationItems.add(_RecommendationItem(
+          icon: Icons.directions_walk_rounded,
+          color: AppColors.primary,
+          bg: AppColors.tint(AppColors.primary),
+          title: 'Jalan santai 30 menit',
+          desc: 'Aktivitas fisik sedang membantu sensitivitas insulin.',
+          trailing: const RecommendBadge(text: 'Nanti', color: AppColors.primary),
+        ));
+      }
+    } else {
+      recommendationItems.add(_RecommendationItem(
+        icon: Icons.directions_walk_rounded,
+        color: AppColors.lime,
+        bg: AppColors.tint(AppColors.lime),
+        title: 'Jalan kaki 30 menit',
+        desc: 'Pagi atau sore hari untuk menjaga sirkulasi darah tetap lancar.',
+        trailing: const RecommendCheck(),
+      ));
+    }
+
+    // 4. Medicine Adherence Recommendation
+    if (today != null) {
+      if (today.medicineTaken) {
+        recommendationItems.add(_RecommendationItem(
+          icon: Icons.medication_rounded,
+          color: AppColors.lime,
+          bg: AppColors.tint(AppColors.lime),
+          title: 'Obat harian dikonsumsi',
+          desc: 'Metformin telah diminum sesuai petunjuk dokter.',
+          trailing: const RecommendCheck(),
+        ));
+      } else {
+        recommendationItems.add(_RecommendationItem(
+          icon: Icons.medication_rounded,
+          color: AppColors.orange,
+          bg: AppColors.tint(AppColors.orange),
+          title: 'Minum obat harian',
+          desc: 'Metformin belum tercatat diminum hari ini.',
+          trailing: const RecommendBadge(text: 'Mendesak', color: AppColors.orange),
+        ));
+      }
+    } else {
+      recommendationItems.add(_RecommendationItem(
+        icon: Icons.bedtime_rounded,
+        color: AppColors.violet,
+        bg: AppColors.tint(AppColors.violet),
+        title: 'Tidur sebelum 22.00',
+        desc: 'Target tidur berkualitas 7-8 jam hari ini.',
+        trailing: RecommendBadge(text: 'Rutin', color: c.muted),
+      ));
+    }
+
     return ListView(
       padding: const EdgeInsets.only(bottom: 130),
       children: [
@@ -115,48 +278,19 @@ class AiScreen extends StatelessWidget {
               AppCard(
                 padding: 6,
                 child: Column(
-                  children: const [
-                    RecommendTile(
-                      icon: Icons.restaurant_rounded,
-                      color: AppColors.lime,
-                      bg: Color(0xFFE7F7EC),
-                      title: 'Kurangi asupan garam',
-                      desc: 'Maksimal 1 sendok teh per hari',
-                      trailing: RecommendCheck(),
-                    ),
-                    _DividerLine(),
-                    RecommendTile(
-                      icon: Icons.water_drop_rounded,
-                      color: AppColors.cyan,
-                      bg: Color(0xFFEAF6FF),
-                      title: 'Minum 2 liter air',
-                      desc: 'Sekitar 8 gelas hari ini',
-                      trailing: RecommendBadge(
-                        text: '5/8',
-                        color: AppColors.cyan,
+                  children: [
+                    for (int i = 0; i < recommendationItems.length; i++) ...[
+                      RecommendTile(
+                        icon: recommendationItems[i].icon,
+                        color: recommendationItems[i].color,
+                        bg: recommendationItems[i].bg,
+                        title: recommendationItems[i].title,
+                        desc: recommendationItems[i].desc,
+                        trailing: recommendationItems[i].trailing,
                       ),
-                    ),
-                    _DividerLine(),
-                    RecommendTile(
-                      icon: Icons.directions_walk_rounded,
-                      color: AppColors.lime,
-                      bg: Color(0xFFE7F7EC),
-                      title: 'Jalan kaki 30 menit',
-                      desc: 'Pagi atau sore hari',
-                      trailing: RecommendCheck(),
-                    ),
-                    _DividerLine(),
-                    RecommendTile(
-                      icon: Icons.bedtime_rounded,
-                      color: AppColors.violet,
-                      bg: Color(0xFFF0EBFF),
-                      title: 'Tidur sebelum 22.00',
-                      desc: 'Target 7-8 jam',
-                      trailing: RecommendBadge(
-                        text: 'Nanti',
-                        color: AppColors.muted,
-                      ),
-                    ),
+                      if (i < recommendationItems.length - 1)
+                        const _DividerLine(),
+                    ],
                   ],
                 ),
               ),
@@ -172,22 +306,22 @@ class AiScreen extends StatelessWidget {
                       color: riskColor,
                       size: 104,
                       stroke: 16,
-                      trackColor: const Color(0xFFEEF3F9),
+                      trackColor: c.line,
                       center: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             '$risk%',
-                            style: const TextStyle(
-                              color: AppColors.text,
+                            style: TextStyle(
+                              color: c.text,
                               fontSize: 26,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
-                          const Text(
+                          Text(
                             'risiko',
                             style: TextStyle(
-                              color: AppColors.muted,
+                              color: c.muted,
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
                             ),
@@ -228,8 +362,8 @@ class AiScreen extends StatelessWidget {
                           const SizedBox(height: 10),
                           Text(
                             riskDesc,
-                            style: const TextStyle(
-                              color: Color(0xFF5A6B7D),
+                            style: TextStyle(
+                              color: c.text,
                               fontSize: 13,
                               height: 1.5,
                             ),
@@ -326,12 +460,11 @@ class _DividerLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Divider(
-      color: Color(0xFFEEF3F9),
+    return Divider(
+      color: AppColors.of(context).line,
       height: 1,
       indent: 12,
       endIndent: 12,
     );
   }
 }
-

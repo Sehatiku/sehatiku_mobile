@@ -114,7 +114,7 @@ class OnboardingScreen extends StatelessWidget {
                     item.title,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: AppColors.text,
+                      color: AppColors.of(context).text,
                       fontSize: compact ? 24 : 27,
                       fontWeight: FontWeight.w800,
                       height: 1.25,
@@ -125,7 +125,7 @@ class OnboardingScreen extends StatelessWidget {
                     item.desc,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: AppColors.muted,
+                      color: AppColors.of(context).muted,
                       fontSize: compact ? 14 : 15,
                       height: 1.6,
                     ),
@@ -147,7 +147,7 @@ class OnboardingScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: index == i
                           ? AppColors.primary
-                          : const Color(0xFFBCD0E6),
+                          : AppColors.of(context).line,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),

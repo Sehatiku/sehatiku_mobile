@@ -4,13 +4,46 @@ import 'package:sehatiku_mobile/core/theme/app_colors.dart';
 // Rule-based labels and colours for the health metrics shown across the app.
 // These are demo heuristics, not medical diagnoses.
 
-/// Human-readable labels for the activity keys stored on a record.
-const activityLabels = {
-  'walk': 'Jalan kaki',
-  'run': 'Lari',
-  'cycle': 'Sepeda',
-  'yoga': 'Yoga',
+// ---------------------------------------------------------------------------
+// Daily-input domain options
+// ---------------------------------------------------------------------------
+
+/// Blood-sugar measurement timing tags (key -> label).
+const bloodSugarTagLabels = {
+  'puasa': 'Puasa',
+  'sebelum_makan': 'Sebelum Makan',
+  'sesudah_makan': 'Sesudah Makan',
+  'sebelum_tidur': 'Sebelum Tidur',
 };
+
+/// Stable order of the blood-sugar timing tags for chip rendering.
+const bloodSugarTagKeys = [
+  'puasa',
+  'sebelum_makan',
+  'sesudah_makan',
+  'sebelum_tidur',
+];
+
+/// Food categories captured for the daily meals quick-input.
+const foodCategories = [
+  'Karbohidrat',
+  'Sayur & Buah',
+  'Protein',
+  'Manis/Gorengan',
+];
+
+/// Meal portion sizes (key -> label).
+const portionLabels = {
+  'kecil': 'Kecil',
+  'sedang': 'Sedang',
+  'besar': 'Besar',
+};
+
+/// Stable order of the portion keys for chip rendering.
+const portionKeys = ['kecil', 'sedang', 'besar'];
+
+/// Sleep quality scale, indexed 0..2.
+const sleepQualityLabels = ['Buruk', 'Cukup', 'Nyenyak'];
 
 /// Arithmetic mean of [v], or 0 when empty.
 double average(List<double> v) =>
@@ -25,7 +58,7 @@ String bloodSugarStatus(int? v) {
 }
 
 Color bloodSugarColor(int? v) {
-  if (v == null) return AppColors.muted;
+  if (v == null) return const Color(0xFF8899B4);
   if (v < 70) return AppColors.amber;
   if (v <= 130) return AppColors.green;
   if (v <= 180) return AppColors.orange;
@@ -41,7 +74,7 @@ String bloodPressureStatus(int? sys, int? dia) {
 }
 
 Color bloodPressureColor(int? sys, int? dia) {
-  if (sys == null || dia == null) return AppColors.muted;
+  if (sys == null || dia == null) return const Color(0xFF8899B4);
   if (sys >= 140 || dia >= 90) return AppColors.red;
   if (sys >= 130 || dia >= 85) return AppColors.orange;
   if (sys < 90 || dia < 60) return AppColors.amber;
@@ -61,7 +94,7 @@ TrendInfo trendInfo(List<double> values, {bool lowerIsBetter = false}) {
   if (values.length < 2) {
     return const TrendInfo(
       'Belum cukup data',
-      AppColors.muted,
+      Color(0xFF8899B4),
       Icons.remove_rounded,
     );
   }
@@ -69,7 +102,7 @@ TrendInfo trendInfo(List<double> values, {bool lowerIsBetter = false}) {
   if (delta.abs() < 0.0001) {
     return const TrendInfo(
       'Stabil',
-      AppColors.muted,
+      Color(0xFF8899B4),
       Icons.trending_flat_rounded,
     );
   }

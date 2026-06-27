@@ -8,7 +8,10 @@ import 'package:sehatiku_mobile/shared/widgets/widgets.dart';
 
 String recordSummary(HealthRecord r) {
   final parts = <String>[];
-  if (r.bloodSugar != null) parts.add('Gula ${r.bloodSugar}');
+  if (r.bloodSugar != null) {
+    final tag = bloodSugarTagLabels[r.bloodSugarTag];
+    parts.add(tag == null ? 'Gula ${r.bloodSugar}' : 'Gula ${r.bloodSugar} ($tag)');
+  }
   if (r.systolic != null && r.diastolic != null) {
     parts.add('Tekanan ${r.bloodPressure}');
   }
@@ -18,10 +21,10 @@ String recordSummary(HealthRecord r) {
     );
   }
   parts.add(r.medicineTaken ? 'Obat tepat waktu' : 'Obat terlewat');
-  if (r.activity != 'none' && r.activityMinutes > 0) {
-    parts.add(
-      '${activityLabels[r.activity] ?? 'Aktivitas'} ${r.activityMinutes} mnt',
-    );
+  if (r.active30) parts.add('Aktif ≥30 mnt');
+  if (r.sleepHours != null) {
+    final h = r.sleepHours!.toStringAsFixed(r.sleepHours! % 1 == 0 ? 0 : 1);
+    parts.add('Tidur ${h}j');
   }
   if (parts.isEmpty) return r.note.isEmpty ? 'Catatan tersimpan' : r.note;
   return parts.join(' · ');
@@ -70,16 +73,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
             height: 50,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.of(context).surface,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: AppColors.primary.withValues(alpha: .07),
+                color: AppColors.of(context).line,
               ),
-              boxShadow: const [
+              boxShadow: [
                 BoxShadow(
-                  color: Color(0x141565D8),
+                  color: AppColors.of(context).text.withValues(alpha: .04),
                   blurRadius: 18,
-                  offset: Offset(0, 8),
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
@@ -95,7 +98,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   child: TextField(
                     controller: _searchController,
                     onChanged: (v) => setState(() => _query = v),
-                    style: const TextStyle(color: AppColors.text, fontSize: 14),
+                    style: TextStyle(color: AppColors.of(context).text, fontSize: 14),
                     decoration: const InputDecoration(
                       isDense: true,
                       border: InputBorder.none,
@@ -173,7 +176,7 @@ class _HistoryEmpty extends StatelessWidget {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                color: AppColors.pale,
+                color: AppColors.of(context).pale,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Icon(icon, color: const Color(0xFFB6C3D2), size: 32),
@@ -182,8 +185,8 @@ class _HistoryEmpty extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.muted,
+              style: TextStyle(
+                color: AppColors.of(context).muted,
                 fontSize: 13.5,
                 height: 1.5,
               ),

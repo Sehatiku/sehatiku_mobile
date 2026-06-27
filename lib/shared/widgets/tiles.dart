@@ -20,6 +20,7 @@ class InsightTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: AppCard(
@@ -43,8 +44,8 @@ class InsightTile extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: AppColors.text,
+                    style: TextStyle(
+                      color: c.text,
                       fontWeight: FontWeight.w800,
                       fontSize: 14.5,
                     ),
@@ -52,8 +53,8 @@ class InsightTile extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     desc,
-                    style: const TextStyle(
-                      color: AppColors.muted,
+                    style: TextStyle(
+                      color: c.muted,
                       height: 1.45,
                       fontSize: 13,
                     ),
@@ -84,6 +85,7 @@ class DoctorTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: AppCard(
@@ -101,13 +103,13 @@ class DoctorTile extends StatelessWidget {
                 children: [
                   Text(
                     name,
-                    style: const TextStyle(
-                      color: AppColors.text,
+                    style: TextStyle(
+                      color: c.text,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                   const SizedBox(height: 3),
-                  Text(role, style: const TextStyle(color: AppColors.muted)),
+                  Text(role, style: TextStyle(color: c.muted)),
                   const SizedBox(height: 7),
                   Text(
                     time,
@@ -116,7 +118,7 @@ class DoctorTile extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: Color(0xFFC2CEDB)),
+            Icon(Icons.chevron_right_rounded, color: c.muted),
           ],
         ),
       ),
@@ -138,6 +140,7 @@ class TimelineTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: AppCard(
@@ -152,23 +155,23 @@ class TimelineTile extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: AppColors.text,
+                    style: TextStyle(
+                      color: c.text,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     desc,
-                    style: const TextStyle(color: AppColors.muted, height: 1.4),
+                    style: TextStyle(color: c.muted, height: 1.4),
                   ),
                 ],
               ),
             ),
             Text(
               time,
-              style: const TextStyle(
-                color: AppColors.muted,
+              style: TextStyle(
+                color: c.muted,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
@@ -200,6 +203,7 @@ class ArticleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: InkWell(
@@ -234,8 +238,8 @@ class ArticleTile extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       title,
-                      style: const TextStyle(
-                        color: AppColors.text,
+                      style: TextStyle(
+                        color: c.text,
                         fontWeight: FontWeight.w800,
                         height: 1.3,
                       ),
@@ -243,15 +247,12 @@ class ArticleTile extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       time,
-                      style: const TextStyle(
-                        color: AppColors.muted,
-                        fontSize: 11.5,
-                      ),
+                      style: TextStyle(color: c.muted, fontSize: 11.5),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded, color: Color(0xFFC2CEDB)),
+              Icon(Icons.chevron_right_rounded, color: c.muted),
             ],
           ),
         ),
@@ -278,6 +279,7 @@ class ProfileRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: onTap,
@@ -290,18 +292,14 @@ class ProfileRow extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
-                  color: AppColors.text,
+                style: TextStyle(
+                  color: c.text,
                   fontWeight: FontWeight.w700,
                   fontSize: 14.5,
                 ),
               ),
             ),
-            trailing ??
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: Color(0xFFC2CEDB),
-                ),
+            trailing ?? Icon(Icons.chevron_right_rounded, color: c.muted),
           ],
         ),
       ),
@@ -309,8 +307,6 @@ class ProfileRow extends StatelessWidget {
   }
 }
 
-/// Circular progress ring with a custom centre widget. Used for the dashboard
-/// health score and the AI risk prediction.
 class RecommendTile extends StatelessWidget {
   const RecommendTile({
     super.key,
@@ -331,6 +327,7 @@ class RecommendTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       child: Row(
@@ -351,8 +348,8 @@ class RecommendTile extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: AppColors.text,
+                  style: TextStyle(
+                    color: c.text,
                     fontWeight: FontWeight.w700,
                     fontSize: 14.5,
                   ),
@@ -360,7 +357,7 @@ class RecommendTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   desc,
-                  style: const TextStyle(color: AppColors.muted, fontSize: 12),
+                  style: TextStyle(color: c.muted, fontSize: 12),
                 ),
               ],
             ),
@@ -421,19 +418,25 @@ class NotifCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
         padding: const EdgeInsets.all(17),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: c.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border(left: BorderSide(color: color, width: 4)),
+          border: Border(
+            left: BorderSide(color: color, width: 4),
+            right: BorderSide(color: c.line),
+            top: BorderSide(color: c.line),
+            bottom: BorderSide(color: c.line),
+          ),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x141565D8),
-              blurRadius: 24,
-              offset: Offset(0, 10),
+              color: Color(0x18000000),
+              blurRadius: 20,
+              offset: Offset(0, 8),
             ),
           ],
         ),
@@ -444,7 +447,7 @@ class NotifCard extends StatelessWidget {
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: bg,
+                color: AppColors.tint(color),
                 borderRadius: BorderRadius.circular(13),
               ),
               child: Icon(icon, color: color, size: 22),
@@ -459,8 +462,8 @@ class NotifCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           title,
-                          style: const TextStyle(
-                            color: AppColors.text,
+                          style: TextStyle(
+                            color: c.text,
                             fontWeight: FontWeight.w800,
                             fontSize: 14.5,
                           ),
@@ -468,8 +471,8 @@ class NotifCard extends StatelessWidget {
                       ),
                       Text(
                         time,
-                        style: const TextStyle(
-                          color: Color(0xFF9AA9BB),
+                        style: TextStyle(
+                          color: c.muted,
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                         ),
@@ -479,8 +482,8 @@ class NotifCard extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     desc,
-                    style: const TextStyle(
-                      color: AppColors.muted,
+                    style: TextStyle(
+                      color: c.muted,
                       fontSize: 13,
                       height: 1.5,
                     ),
@@ -515,6 +518,7 @@ class HistoryNode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -528,7 +532,7 @@ class HistoryNode extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: scoreColor,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 3),
+                  border: Border.all(color: c.background, width: 3),
                   boxShadow: [
                     BoxShadow(
                       color: scoreColor,
@@ -540,7 +544,7 @@ class HistoryNode extends StatelessWidget {
               ),
               if (!last)
                 Expanded(
-                  child: Container(width: 2, color: const Color(0xFFD4E3F3)),
+                  child: Container(width: 2, color: c.line),
                 ),
             ],
           ),
@@ -559,8 +563,8 @@ class HistoryNode extends StatelessWidget {
                         Expanded(
                           child: Text(
                             date,
-                            style: const TextStyle(
-                              color: AppColors.text,
+                            style: TextStyle(
+                              color: c.text,
                               fontWeight: FontWeight.w800,
                               fontSize: 14.5,
                             ),
@@ -590,8 +594,8 @@ class HistoryNode extends StatelessWidget {
                     const SizedBox(height: 7),
                     Text(
                       desc,
-                      style: const TextStyle(
-                        color: AppColors.muted,
+                      style: TextStyle(
+                        color: c.muted,
                         fontSize: 12.5,
                         height: 1.5,
                       ),

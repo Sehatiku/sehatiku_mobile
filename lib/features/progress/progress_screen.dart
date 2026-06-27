@@ -177,8 +177,8 @@ class ProgressScreen extends StatelessWidget {
                         children: [
                           Text(
                             '${metric.name} · Rata-rata',
-                            style: const TextStyle(
-                              color: AppColors.muted,
+                            style: TextStyle(
+                              color: AppColors.of(context).muted,
                               fontWeight: FontWeight.w600,
                               fontSize: 13,
                             ),
@@ -186,8 +186,8 @@ class ProgressScreen extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(
                             metric.averageText,
-                            style: const TextStyle(
-                              color: AppColors.text,
+                            style: TextStyle(
+                              color: AppColors.of(context).text,
                               fontWeight: FontWeight.w800,
                               fontSize: 28,
                             ),
@@ -262,7 +262,7 @@ class ProgressScreen extends StatelessWidget {
               StatBox(
                 label: 'Tren',
                 value: hasChart ? trend.label : '—',
-                color: hasChart ? trend.color : AppColors.muted,
+                color: hasChart ? trend.color : AppColors.of(context).muted,
                 icon: hasChart ? trend.icon : null,
               ),
             ],
@@ -273,11 +273,14 @@ class ProgressScreen extends StatelessWidget {
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
-              gradient: const LinearGradient(
-                colors: [Color(0xFFF0EBFF), Color(0xFFEAF2FE)],
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.of(context).surface,
+                  AppColors.of(context).elevated,
+                ],
               ),
               border: Border.all(
-                color: AppColors.violet.withValues(alpha: .14),
+                color: AppColors.of(context).line,
               ),
             ),
             child: Row(
@@ -306,7 +309,7 @@ class ProgressScreen extends StatelessWidget {
                       const Text(
                         'Analisis AI',
                         style: TextStyle(
-                          color: Color(0xFF5A4BB0),
+                          color: AppColors.violet,
                           fontWeight: FontWeight.w800,
                           fontSize: 13.5,
                         ),
@@ -314,8 +317,8 @@ class ProgressScreen extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         metric.insight(trend, hasChart),
-                        style: const TextStyle(
-                          color: Color(0xFF5A6B7D),
+                        style: TextStyle(
+                          color: AppColors.of(context).text,
                           fontSize: 13,
                           height: 1.5,
                         ),

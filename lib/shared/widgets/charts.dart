@@ -21,17 +21,29 @@ class TrendChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return CustomPaint(
-      painter: TrendPainter(color: color, variant: variant, values: values),
+      painter: TrendPainter(
+        color: color,
+        gridColor: colors.line,
+        variant: variant,
+        values: values,
+      ),
       child: const SizedBox.expand(),
     );
   }
 }
 
 class TrendPainter extends CustomPainter {
-  TrendPainter({required this.color, required this.variant, this.values});
+  TrendPainter({
+    required this.color,
+    required this.gridColor,
+    required this.variant,
+    this.values,
+  });
 
   final Color color;
+  final Color gridColor;
   final int variant;
   final List<double>? values;
 
@@ -61,7 +73,7 @@ class TrendPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final grid = Paint()
-      ..color = AppColors.line
+      ..color = gridColor
       ..strokeWidth = 1;
     for (var i = 1; i < 4; i++) {
       final y = size.height * i / 4;
@@ -119,6 +131,7 @@ class TrendPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant TrendPainter oldDelegate) {
     return oldDelegate.color != color ||
+        oldDelegate.gridColor != gridColor ||
         oldDelegate.variant != variant ||
         !_sameValues(oldDelegate.values, values);
   }
@@ -214,7 +227,6 @@ class _RingPainter extends CustomPainter {
       old.stroke != stroke;
 }
 
-
 /// Placeholder shown inside a chart card when there aren't enough points yet.
 class ChartEmpty extends StatelessWidget {
   const ChartEmpty({super.key});
@@ -223,10 +235,11 @@ class ChartEmpty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Container(
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: AppColors.pale,
+        color: colors.pale,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -242,8 +255,8 @@ class ChartEmpty extends StatelessWidget {
             child: Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.muted,
+              style: TextStyle(
+                color: colors.muted,
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
               ),

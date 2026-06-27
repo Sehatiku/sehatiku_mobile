@@ -59,20 +59,9 @@ class AppHome extends StatelessWidget {
     return Stack(
       key: const ValueKey('app'),
       children: [
-        const Positioned.fill(
+        Positioned.fill(
           child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFE9F3FF),
-                  Color(0xFFF4F9FF),
-                  Color(0xFFFBFDFF),
-                ],
-                stops: [0.0, 0.4, 1.0],
-              ),
-            ),
+            decoration: BoxDecoration(color: AppColors.of(context).background),
           ),
         ),
         SafeArea(
