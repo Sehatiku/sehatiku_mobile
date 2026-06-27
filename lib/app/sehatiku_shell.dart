@@ -1,11 +1,22 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:sehatiku_mobile/models/app_models.dart';
-import 'package:sehatiku_mobile/screens/sehatiku_screens.dart';
+
+import 'package:sehatiku_mobile/core/core.dart';
+import 'package:sehatiku_mobile/features/auth/login_screen.dart';
+import 'package:sehatiku_mobile/features/home/app_home.dart';
+import 'package:sehatiku_mobile/features/onboarding/onboarding_screen.dart';
+import 'package:sehatiku_mobile/features/splash/splash_screen.dart';
 
 class SehatikuShell extends StatefulWidget {
-  const SehatikuShell({super.key});
+  const SehatikuShell({
+    super.key,
+    required this.darkMode,
+    required this.onDarkMode,
+  });
+
+  final bool darkMode;
+  final ValueChanged<bool> onDarkMode;
 
   @override
   State<SehatikuShell> createState() => _SehatikuShellState();
@@ -21,7 +32,6 @@ class _SehatikuShellState extends State<SehatikuShell> {
   int _rangeIndex = 0;
   int _forecastIndex = 0;
   int _educationFilter = 0;
-  bool _darkMode = false;
 
   @override
   void initState() {
@@ -90,14 +100,14 @@ class _SehatikuShellState extends State<SehatikuShell> {
             rangeIndex: _rangeIndex,
             forecastIndex: _forecastIndex,
             educationFilter: _educationFilter,
-            darkMode: _darkMode,
+            darkMode: widget.darkMode,
             onView: (view) => setState(() => _view = view),
             onProgress: (value) => setState(() => _progressIndex = value),
             onRange: (value) => setState(() => _rangeIndex = value),
             onForecast: (value) => setState(() => _forecastIndex = value),
             onEducationFilter: (value) =>
                 setState(() => _educationFilter = value),
-            onDarkMode: (value) => setState(() => _darkMode = value),
+            onDarkMode: widget.onDarkMode,
             onAction: _showSnack,
             onLogout: () => setState(() {
               _stage = Stage.login;

@@ -1,19 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum Stage { splash, onboarding, login, app }
-
-enum MainView {
-  beranda,
-  catatan,
-  ai,
-  progres,
-  profil,
-  dokter,
-  riwayat,
-  notifikasi,
-  edukasi,
-}
-
+/// A single onboarding slide (icon, copy, and its gradient/blob colours).
 class OnboardingItem {
   const OnboardingItem({
     required this.icon,
