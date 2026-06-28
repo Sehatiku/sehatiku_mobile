@@ -14,10 +14,14 @@ class HealthRecord {
     this.diastolic,
     this.weight,
     this.medicineTaken = false,
+    this.medicineName = '',
+    this.medicineTime = '',
     // Lifestyle
     Set<String>? meals,
     this.portion = '',
     this.active30 = false,
+    this.activityType = '',
+    this.activityMinutes = 0,
     this.sleepHours,
     this.sleepQuality = 1,
     this.stressIndex = 1,
@@ -39,6 +43,8 @@ class HealthRecord {
   final int? diastolic;
   final double? weight;
   final bool medicineTaken;
+  final String medicineName;
+  final String medicineTime;
 
   // --- Lifestyle (daily quick choices) ---
 
@@ -50,6 +56,8 @@ class HealthRecord {
 
   /// Whether the user did ≥30 minutes of physical activity today.
   final bool active30;
+  final String activityType;
+  final int activityMinutes;
 
   /// Sleep duration in hours; null when not logged.
   final double? sleepHours;
@@ -157,9 +165,13 @@ class HealthRecord {
     int? diastolic,
     double? weight,
     bool? medicineTaken,
+    String? medicineName,
+    String? medicineTime,
     Set<String>? meals,
     String? portion,
     bool? active30,
+    String? activityType,
+    int? activityMinutes,
     double? sleepHours,
     int? sleepQuality,
     int? stressIndex,
@@ -175,9 +187,13 @@ class HealthRecord {
       diastolic: diastolic ?? this.diastolic,
       weight: weight ?? this.weight,
       medicineTaken: medicineTaken ?? this.medicineTaken,
+      medicineName: medicineName ?? this.medicineName,
+      medicineTime: medicineTime ?? this.medicineTime,
       meals: meals ?? this.meals,
       portion: portion ?? this.portion,
       active30: active30 ?? this.active30,
+      activityType: activityType ?? this.activityType,
+      activityMinutes: activityMinutes ?? this.activityMinutes,
       sleepHours: sleepHours ?? this.sleepHours,
       sleepQuality: sleepQuality ?? this.sleepQuality,
       stressIndex: stressIndex ?? this.stressIndex,
@@ -195,9 +211,13 @@ class HealthRecord {
     'diastolic': diastolic,
     'weight': weight,
     'medicineTaken': medicineTaken,
+    'medicineName': medicineName,
+    'medicineTime': medicineTime,
     'meals': meals.toList(),
     'portion': portion,
     'active30': active30,
+    'activityType': activityType,
+    'activityMinutes': activityMinutes,
     'sleepHours': sleepHours,
     'sleepQuality': sleepQuality,
     'stressIndex': stressIndex,
@@ -215,6 +235,8 @@ class HealthRecord {
       diastolic: json['diastolic'] as int?,
       weight: (json['weight'] as num?)?.toDouble(),
       medicineTaken: json['medicineTaken'] as bool? ?? false,
+      medicineName: json['medicineName'] as String? ?? '',
+      medicineTime: json['medicineTime'] as String? ?? '',
       meals: (json['meals'] as List<dynamic>? ?? const [])
           .map((e) => e as String)
           .toSet(),
@@ -223,6 +245,8 @@ class HealthRecord {
       active30:
           json['active30'] as bool? ??
           ((json['activityMinutes'] as int?) ?? 0) >= 30,
+      activityType: json['activityType'] as String? ?? '',
+      activityMinutes: json['activityMinutes'] as int? ?? 0,
       sleepHours: (json['sleepHours'] as num?)?.toDouble(),
       sleepQuality: json['sleepQuality'] as int? ?? 1,
       stressIndex: json['stressIndex'] as int? ?? 1,

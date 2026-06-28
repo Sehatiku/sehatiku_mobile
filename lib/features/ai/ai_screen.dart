@@ -151,7 +151,9 @@ class AiScreen extends StatelessWidget {
           color: AppColors.lime,
           bg: AppColors.tint(AppColors.lime),
           title: 'Target aktivitas tercapai',
-          desc: 'Hebat! Anda sudah aktif bergerak ≥30 menit hari ini.',
+          desc: today.activityType.isNotEmpty
+              ? 'Hebat! Anda sudah melakukan ${today.activityType} selama ${today.activityMinutes} menit.'
+              : 'Hebat! Anda sudah aktif bergerak ≥30 menit hari ini.',
           trailing: const RecommendCheck(),
         ));
       } else {
@@ -183,7 +185,9 @@ class AiScreen extends StatelessWidget {
           color: AppColors.lime,
           bg: AppColors.tint(AppColors.lime),
           title: 'Obat harian dikonsumsi',
-          desc: 'Metformin telah diminum sesuai petunjuk dokter.',
+          desc: today.medicineName.isNotEmpty
+              ? '${today.medicineName} telah diminum sesuai petunjuk dokter.'
+              : 'Metformin telah diminum sesuai petunjuk dokter.',
           trailing: const RecommendCheck(),
         ));
       } else {
@@ -192,7 +196,9 @@ class AiScreen extends StatelessWidget {
           color: AppColors.orange,
           bg: AppColors.tint(AppColors.orange),
           title: 'Minum obat harian',
-          desc: 'Metformin belum tercatat diminum hari ini.',
+          desc: today.medicineName.isNotEmpty
+              ? '${today.medicineName} belum tercatat diminum hari ini.'
+              : 'Metformin belum tercatat diminum hari ini.',
           trailing: const RecommendBadge(text: 'Mendesak', color: AppColors.orange),
         ));
       }

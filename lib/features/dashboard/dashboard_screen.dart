@@ -29,14 +29,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _dashboard = DashboardService.instance.cachedDashboard;
+    _loading = _dashboard == null;
     _fetch();
   }
 
   Future<void> _fetch() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    if (_dashboard == null) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    } else {
+      setState(() => _error = null);
+    }
     try {
       final data = await DashboardService.instance.fetchDashboard();
       if (mounted) setState(() => _dashboard = data);
@@ -77,6 +83,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 22),
 
+          if (store.hasPendingSync) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.amber.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.amber.withValues(alpha: .3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.sync_problem_rounded,
+                    color: AppColors.amber,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Beberapa catatan belum tersinkronisasi ke server.',
+                      style: TextStyle(
+                        color: colors.text,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
           // ── AI Risk Card (from API) or local score card ──────────────────────
           if (_loading)
             const _LoadingCard()
@@ -95,7 +136,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Expanded(child: SectionTitle(title: 'Pengukuran Terakhir')),
+                const Expanded(
+                    child: SectionTitle(title: 'Pengukuran Terakhir')),
                 if (_error != null)
                   GestureDetector(
                     onTap: _fetch,
@@ -110,6 +152,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 13),
             _MeasurementGrid(
               dashboard: _dashboard!,
+              latest: latest,
               onView: widget.onView,
             ),
             const SizedBox(height: 8),
@@ -171,8 +214,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 24),
           ],
 
-
-
           // ── Education teaser ─────────────────────────────────────────────────
           _EducationTeaser(onView: widget.onView),
           const SizedBox(height: 26),
@@ -183,13 +224,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onTap: () => widget.onView(MainView.ai),
             child: GradientPanel(
               radius: 26,
-              colors: const [AppColors.violet, Color(0xFF9B7BFF), AppColors.cyan],
+              colors: const [
+                AppColors.violet,
+                Color(0xFF9B7BFF),
+                AppColors.cyan
+              ],
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: .2),
                       borderRadius: BorderRadius.circular(20),
@@ -210,8 +255,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    _dashboard != null &&
-                            _dashboard!.recommendations.isNotEmpty
+                    _dashboard != null && _dashboard!.recommendations.isNotEmpty
                         ? '"${_dashboard!.recommendations.first}"'
                         : '"Kondisi Anda stabil. Pertahankan pola makan rendah garam hari ini."',
                     style: const TextStyle(
@@ -278,8 +322,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   height: 96,
                   child: bsValues.length < 2
                       ? const ChartEmpty()
-                      : TrendChart(
-                          color: AppColors.primary, values: bsValues),
+                      : TrendChart(color: AppColors.primary, values: bsValues),
                 ),
                 const SizedBox(height: 6),
                 if (bsValues.length >= 2)
@@ -520,11 +563,11 @@ class _DailyChecklistCard extends StatelessWidget {
     final bool medicineDone = today?.medicineTaken ?? false;
     final bool glucoseDone = dashboard?.latestMeasurements.glucose != null ||
         today?.bloodSugar != null;
-    final bool bpDone =
-        dashboard?.latestMeasurements.bloodPressure != null ||
-            (today?.systolic != null && today!.systolic! > 0);
+    final bool bpDone = dashboard?.latestMeasurements.bloodPressure != null ||
+        (today?.systolic != null && today!.systolic! > 0);
 
-    final doneCount = [medicineDone, glucoseDone, bpDone].where((b) => b).length;
+    final doneCount =
+        [medicineDone, glucoseDone, bpDone].where((b) => b).length;
     final allDone = doneCount == 3;
     final progressColor = allDone ? AppColors.green : AppColors.primary;
 
@@ -928,8 +971,7 @@ class _MotivationalQuote extends StatelessWidget {
             top: -4,
             right: 0,
             child: Icon(Icons.format_quote_rounded,
-                size: 36,
-                color: AppColors.green.withValues(alpha: .35)),
+                size: 36, color: AppColors.green.withValues(alpha: .35)),
           ),
           Padding(
             padding: const EdgeInsets.only(right: 24),
@@ -1064,8 +1106,8 @@ class _ApiRiskCard extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 7),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: .22),
                       borderRadius: BorderRadius.circular(30),
@@ -1075,8 +1117,7 @@ class _ApiRiskCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(statusEmoji,
-                            style: const TextStyle(fontSize: 13)),
+                        Text(statusEmoji, style: const TextStyle(fontSize: 13)),
                         const SizedBox(width: 7),
                         Text(
                           '${risk.riskLabel[0].toUpperCase()}${risk.riskLabel.substring(1)} · ${risk.status}',
@@ -1103,8 +1144,8 @@ class _ApiRiskCard extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 5),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: .14),
                       borderRadius: BorderRadius.circular(12),
@@ -1112,8 +1153,7 @@ class _ApiRiskCard extends StatelessWidget {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.info_rounded,
-                            color: Colors.white, size: 14),
+                        Icon(Icons.info_rounded, color: Colors.white, size: 14),
                         SizedBox(width: 5),
                         Text('Skor AI — bukan diagnosis',
                             style: TextStyle(
@@ -1135,17 +1175,25 @@ class _ApiRiskCard extends StatelessWidget {
 
 /// Grid showing glucose + blood pressure from the API response.
 class _MeasurementGrid extends StatelessWidget {
-  const _MeasurementGrid({required this.dashboard, required this.onView});
+  const _MeasurementGrid({
+    required this.dashboard,
+    required this.latest,
+    required this.onView,
+  });
 
   final PatientDashboard dashboard;
+  final HealthRecord? latest;
   final ValueChanged<MainView> onView;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     final m = dashboard.latestMeasurements;
-    final hasGlucose = m.glucose != null;
-    final hasBP = m.bloodPressure != null;
+    final glucose = m.glucose?.value ?? latest?.bloodSugar;
+    final systolic = m.bloodPressure?.systolic ?? latest?.systolic;
+    final diastolic = m.bloodPressure?.diastolic ?? latest?.diastolic;
+    final hasGlucose = glucose != null;
+    final hasBP = systolic != null && diastolic != null;
 
     if (!hasGlucose && !hasBP) {
       return AppCard(
@@ -1197,29 +1245,23 @@ class _MeasurementGrid extends StatelessWidget {
         SummaryCard(
           icon: Icons.water_drop_rounded,
           label: 'Gula Darah',
-          value: hasGlucose ? '${m.glucose!.value}' : '—',
+          value: hasGlucose ? '$glucose' : '—',
           unit: 'mg/dL',
-          status: hasGlucose
-              ? bloodSugarStatus(m.glucose!.value)
-              : 'Belum tercatat',
+          status: hasGlucose ? bloodSugarStatus(glucose) : 'Belum tercatat',
           statusColor: hasGlucose
-              ? bloodSugarColor(m.glucose!.value)
+              ? bloodSugarColor(glucose)
               : AppColors.of(context).muted,
           iconColor: AppColors.primary,
         ),
         SummaryCard(
           icon: Icons.favorite_rounded,
           label: 'Tekanan Darah',
-          value: hasBP
-              ? '${m.bloodPressure!.systolic}/${m.bloodPressure!.diastolic}'
-              : '—',
+          value: hasBP ? '$systolic/$diastolic' : '—',
           status: hasBP
-              ? bloodPressureStatus(
-                  m.bloodPressure!.systolic, m.bloodPressure!.diastolic)
+              ? bloodPressureStatus(systolic, diastolic)
               : 'Belum tercatat',
           statusColor: hasBP
-              ? bloodPressureColor(
-                  m.bloodPressure!.systolic, m.bloodPressure!.diastolic)
+              ? bloodPressureColor(systolic, diastolic)
               : AppColors.of(context).muted,
           iconColor: AppColors.pink,
         ),
@@ -1564,13 +1606,13 @@ class HealthScoreCard extends StatelessWidget {
                         fontSize: 13)),
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 7),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: .22),
                     borderRadius: BorderRadius.circular(30),
-                    border: Border.all(
-                        color: Colors.white.withValues(alpha: .35)),
+                    border:
+                        Border.all(color: Colors.white.withValues(alpha: .35)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1600,8 +1642,8 @@ class HealthScoreCard extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 5),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: .14),
                       borderRadius: BorderRadius.circular(12),
@@ -1609,8 +1651,7 @@ class HealthScoreCard extends StatelessWidget {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.info_rounded,
-                            color: Colors.white, size: 14),
+                        Icon(Icons.info_rounded, color: Colors.white, size: 14),
                         SizedBox(width: 5),
                         Text('Bukan diagnosis medis',
                             style: TextStyle(
@@ -1631,7 +1672,9 @@ class HealthScoreCard extends StatelessWidget {
 }
 
 String _scoreInsight(int score) {
-  if (score >= 85) return 'Kondisi Anda sangat baik. Pertahankan kebiasaan ini.';
+  if (score >= 85) {
+    return 'Kondisi Anda sangat baik. Pertahankan kebiasaan ini.';
+  }
   if (score >= 70) return 'Kondisi Anda baik. Sedikit perbaikan akan membantu.';
   if (score >= 60) return 'Perlu perhatian pada beberapa indikator hari ini.';
   return 'Beberapa indikator perlu diperhatikan. Tetap jaga pola hidup.';
@@ -1675,8 +1718,7 @@ class _LocalSummaryGrid extends StatelessWidget {
           icon: Icons.monitor_weight_rounded,
           label: 'Berat Badan',
           value: record.weight != null
-              ? record.weight!.toStringAsFixed(
-                  record.weight! % 1 == 0 ? 0 : 1)
+              ? record.weight!.toStringAsFixed(record.weight! % 1 == 0 ? 0 : 1)
               : '—',
           unit: 'kg',
           status: 'Tercatat',
@@ -1686,10 +1728,17 @@ class _LocalSummaryGrid extends StatelessWidget {
         SummaryCard(
           icon: Icons.medication_rounded,
           label: 'Obat',
-          value: record.medicineTaken ? 'Diminum' : 'Terlewat',
-          status: record.medicineTaken ? 'Tepat waktu' : 'Belum diminum',
-          statusColor:
-              record.medicineTaken ? AppColors.lime : AppColors.red,
+          value: record.medicineTaken
+              ? (record.medicineName.isNotEmpty
+                  ? record.medicineName
+                  : 'Diminum')
+              : 'Terlewat',
+          status: record.medicineTaken
+              ? (record.medicineTime.isNotEmpty
+                  ? 'Diminum jam ${record.medicineTime}'
+                  : 'Tepat waktu')
+              : 'Belum diminum',
+          statusColor: record.medicineTaken ? AppColors.lime : AppColors.red,
           iconColor: record.medicineTaken ? AppColors.lime : AppColors.red,
           valueIcon: record.medicineTaken
               ? Icons.check_circle_rounded
@@ -1783,8 +1832,7 @@ class _TodayPromptCard extends StatelessWidget {
                           fontSize: 14.5)),
                   const SizedBox(height: 2),
                   Text('Ketuk untuk mengisi catatan harian.',
-                      style:
-                          TextStyle(color: colors.muted, fontSize: 12.5)),
+                      style: TextStyle(color: colors.muted, fontSize: 12.5)),
                 ],
               ),
             ),

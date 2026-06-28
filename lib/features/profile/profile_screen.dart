@@ -37,6 +37,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _dashboard = DashboardService.instance.cachedDashboard;
     _fetchIfPatient();
   }
 
@@ -226,10 +227,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 12),
           // SOS Button
-          _SosButton(
-            doctorName: _dashboard?.profile.assignedNakesName,
-            onAction: widget.onAction,
-          ),
+          // _SosButton(
+          //   doctorName: _dashboard?.profile.assignedNakesName,
+          //   onAction: widget.onAction,
+          // ),
           const SizedBox(height: 22),
           AppCard(
             padding: 18,
@@ -301,45 +302,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'both' => 'Diabetes Tipe 2 & Hipertensi',
         _ => type ?? 'Pasien',
       };
-}
-
-class _SosButton extends StatelessWidget {
-  const _SosButton({
-    this.doctorName,
-    required this.onAction,
-  });
-
-  final String? doctorName;
-  final ValueChanged<String> onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    final sosColor = const Color(0xFFFF5A5A);
-    final name = doctorName ?? 'Dokter Saka';
-    return SizedBox(
-      width: double.infinity,
-      height: 54,
-      child: FilledButton.icon(
-        onPressed: () {
-          onAction('Menghubungi $name (WhatsApp): +62 812-3456-7890');
-        },
-        icon: const Icon(Icons.phone_in_talk_rounded, size: 20),
-        label: const Text('Hubungi Dokter Penanggung Jawab'),
-        style: FilledButton.styleFrom(
-          backgroundColor: sosColor.withValues(alpha: .12),
-          foregroundColor: sosColor,
-          textStyle: const TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 15,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          elevation: 0,
-        ),
-      ),
-    );
-  }
 }
 
 class _InfoRow extends StatelessWidget {
@@ -418,11 +380,9 @@ class _InfoRow extends StatelessWidget {
               ],
             ),
           ),
-          if (trailing)
-            Icon(Icons.chevron_right_rounded, color: colors.muted),
+          if (trailing) Icon(Icons.chevron_right_rounded, color: colors.muted),
         ],
       ),
     );
   }
 }
-

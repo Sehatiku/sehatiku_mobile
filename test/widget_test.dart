@@ -70,6 +70,35 @@ void main() {
               }
             },
           ));
+        } else if (options.path.contains('/api/v1/patients/assigned-nakes')) {
+          handler.resolve(Response(
+            requestOptions: options,
+            statusCode: 200,
+            data: {
+              'data': {
+                'nakes_id': '789',
+                'full_name': 'dr. Surya Wijaya, Sp.PD',
+                'role': 'dokter',
+                'specialization': 'Spesialis Penyakit Dalam',
+                'hospital': 'Puskesmas Sehat Sentosa',
+                'whatsapp_phone': '0812-0000-1111',
+                'email': 'surya@example.com',
+                'sip_number': 'SIP/123/2026',
+                'str_number': 'STR/456/2026',
+                'schedule': [
+                  {'day': 'Senin - Jumat', 'time': '08.00 - 14.00'},
+                ],
+              }
+            },
+          ));
+        } else if (options.path.contains('/api/v1/patients/consultations')) {
+          handler.resolve(Response(
+            requestOptions: options,
+            statusCode: 201,
+            data: {
+              'message': 'Keluhan berhasil dikirim',
+            },
+          ));
         } else {
           handler.next(options);
         }
@@ -119,7 +148,7 @@ void main() {
     await tester.tap(find.text('Catat').first);
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Catatan Harian'), findsOneWidget);
-    expect(find.byType(Switch), findsAtLeastNWidgets(1));
+    expect(find.text('Gula Darah'), findsOneWidget);
 
     // Let the pending splash timer fire so the test ends cleanly.
     await tester.pump(const Duration(seconds: 3));
