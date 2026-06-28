@@ -10,6 +10,9 @@ class DashboardProfile {
     required this.fullName,
     required this.age,
     required this.diseaseType,
+    this.companionName,
+    this.companionPhone,
+    this.assignedNakesName,
   });
 
   final String fullName;
@@ -18,11 +21,32 @@ class DashboardProfile {
   /// 'diabetes_t2' | 'hypertension' | 'both'
   final String diseaseType;
 
+  /// Nama pendamping/kontak darurat dari field `companion_name`.
+  final String? companionName;
+
+  /// Nomor WA pendamping dari field `companion_phone`.
+  final String? companionPhone;
+
+  /// Nama nakes penanggung jawab dari field `assigned_nakes_name`.
+  final String? assignedNakesName;
+
+  /// Formatted "Nama · nomor" untuk ditampilkan di profil. Null jika belum ada.
+  String? get emergencyContactDisplay {
+    final name = companionName;
+    final phone = companionPhone;
+    if (name == null || name.trim().isEmpty) return null;
+    if (phone == null || phone.trim().isEmpty) return name;
+    return '$name · $phone';
+  }
+
   factory DashboardProfile.fromJson(Map<String, dynamic> json) =>
       DashboardProfile(
         fullName: json['full_name'] as String,
         age: json['age'] as int,
         diseaseType: json['disease_type'] as String,
+        companionName: json['companion_name'] as String?,
+        companionPhone: json['companion_phone'] as String?,
+        assignedNakesName: json['assigned_nakes_name'] as String?,
       );
 }
 

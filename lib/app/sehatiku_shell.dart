@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:sehatiku_mobile/core/core.dart';
 import 'package:sehatiku_mobile/data/models/auth_models.dart';
+import 'package:sehatiku_mobile/data/repositories/health_store.dart';
 import 'package:sehatiku_mobile/data/services/auth_service.dart';
 import 'package:sehatiku_mobile/features/auth/login_screen.dart';
 import 'package:sehatiku_mobile/features/home/app_home.dart';
@@ -84,6 +85,13 @@ class _SehatikuShellState extends State<SehatikuShell> {
 
   void _onLogin(Session session) {
     FocusScope.of(context).unfocus();
+    // Guard: app mobile ini hanya untuk pasien.
+    // Akun nakes/dokter harus menggunakan aplikasi lain.
+    if (session.actorType != ActorType.patient) {
+      _showSnack('Akun ini bukan akun pasien. Gunakan aplikasi Sehatiku untuk tenaga kesehatan.');
+      AuthService.instance.logout();
+      return;
+    }
     setState(() {
       _session = session;
       _stage = Stage.app;
@@ -92,6 +100,7 @@ class _SehatikuShellState extends State<SehatikuShell> {
   }
 
   Future<void> _onLogout() async {
+    await HealthScope.of(context).clear();
     await AuthService.instance.logout();
     if (!mounted) return;
     setState(() {

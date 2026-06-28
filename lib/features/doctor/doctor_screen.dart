@@ -97,22 +97,28 @@ class DoctorScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _DoctorStat(
-                      value: '10+',
-                      label: 'Tahun Eksp',
-                      valueColor: colors.text,
+                    Expanded(
+                      child: _DoctorStat(
+                        value: '10+',
+                        label: 'Tahun Eksp',
+                        valueColor: colors.text,
+                      ),
                     ),
                     const _StatDivider(),
-                    const _DoctorStat(
-                      value: '4.9',
-                      label: 'Rating Asosiasi',
-                      valueColor: AppColors.lime,
+                    const Expanded(
+                      child: _DoctorStat(
+                        value: '4.9',
+                        label: 'Rating Asosiasi',
+                        valueColor: AppColors.lime,
+                      ),
                     ),
                     const _StatDivider(),
-                    _DoctorStat(
-                      value: '99%',
-                      label: 'Respon Cepat',
-                      valueColor: colors.text,
+                    Expanded(
+                      child: _DoctorStat(
+                        value: '99%',
+                        label: 'Respon Cepat',
+                        valueColor: colors.text,
+                      ),
                     ),
                   ],
                 ),
@@ -371,6 +377,7 @@ class _DoctorStat extends StatelessWidget {
       children: [
         Text(
           value,
+          textAlign: TextAlign.center,
           style: TextStyle(
             color: valueColor ?? AppColors.of(context).text,
             fontWeight: FontWeight.w800,
@@ -380,6 +387,7 @@ class _DoctorStat extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           label,
+          textAlign: TextAlign.center,
           style: TextStyle(
             color: AppColors.of(context).muted,
             fontSize: 11,

@@ -58,6 +58,10 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   @override
   void reassemble() {
     super.reassemble();
+    _pulseController?.dispose();
+    _pulseController = null;
+    _ecgController?.dispose();
+    _ecgController = null;
     _initControllers();
   }
 
@@ -94,25 +98,10 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       _error = null;
     });
     try {
-      // Try patient login first; if 401 try nakes login.
-      // A smarter UX would offer a role selector — for now we auto-detect.
-      Session session;
-      try {
-        session = await AuthService.instance.loginPatient(
-          username: username,
-          password: password,
-        );
-      } on ApiException catch (e) {
-        if (e.statusCode == 401) {
-          // Might be a nakes account — try the nakes endpoint.
-          session = await AuthService.instance.loginNakes(
-            username: username,
-            password: password,
-          );
-        } else {
-          rethrow;
-        }
-      }
+      final session = await AuthService.instance.loginPatient(
+        username: username,
+        password: password,
+      );
       if (!mounted) return;
       widget.onLogin(session);
     } on ApiException catch (e) {

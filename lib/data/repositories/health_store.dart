@@ -96,6 +96,14 @@ class HealthStore extends ChangeNotifier {
     notifyListeners();
     await _persist();
   }
+
+  Future<void> clear() async {
+    _records.clear();
+    _loaded = false;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_storageKey);
+  }
 }
 
 /// Exposes the [HealthStore] to the widget subtree and rebuilds dependents when
