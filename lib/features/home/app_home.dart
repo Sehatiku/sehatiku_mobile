@@ -120,10 +120,12 @@ class AppHome extends StatelessWidget {
           ),
         ),
         if (_showNav)
-          Positioned(
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeInOut,
             left: 16,
             right: 16,
-            bottom: 18,
+            bottom: MediaQuery.of(context).viewInsets.bottom > 0 ? -100 : 18,
             child: FloatingNav(view: view, onView: onView),
           ),
       ],

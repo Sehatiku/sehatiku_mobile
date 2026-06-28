@@ -137,33 +137,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 11,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: .2),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.verified_rounded,
-                              color: Colors.white,
-                              size: 15,
-                            ),
-                            SizedBox(width: 6),
-                            Text(
-                              'Akun Terverifikasi',
-                              style: TextStyle(
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 11,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: .2),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.verified_rounded,
                                 color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 11.5,
+                                size: 15,
                               ),
-                            ),
-                          ],
+                              SizedBox(width: 6),
+                              Text(
+                                'Akun Terverifikasi',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 11.5,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -190,7 +194,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   iconBg: AppColors.tint(AppColors.orange),
                   iconColor: AppColors.orange,
                   label: 'Kontak Darurat',
-                  value: 'Andi (Suami) · 0812-3456',
+                  value: _dashboard?.profile.emergencyContactDisplay,
+                  placeholder: 'Belum ada kontak darurat',
                 ),
                 Divider(color: AppColors.of(context).line, height: 1),
                 InkWell(
@@ -201,7 +206,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     iconBg: AppColors.tint(AppColors.primary),
                     iconColor: AppColors.primary,
                     label: 'Dokter Penanggung Jawab',
-                    value: 'dr. Surya Wijaya, Sp.PD',
+                    value: _dashboard?.profile.assignedNakesName,
+                    placeholder: 'Belum ada dokter yang ditugaskan',
                     trailing: true,
                   ),
                 ),
@@ -219,23 +225,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 12),
+          // SOS Button
+          _SosButton(
+            doctorName: _dashboard?.profile.assignedNakesName,
+            onAction: widget.onAction,
+          ),
+          const SizedBox(height: 22),
           AppCard(
             padding: 18,
             child: Column(
               children: [
-                ProfileRow(
-                  icon: Icons.lock_rounded,
-                  label: 'Privasi',
-                  onTap: () => widget.onAction('Pengaturan privasi tersedia.'),
-                ),
-                Divider(color: AppColors.of(context).line, height: 1),
-                ProfileRow(
-                  icon: Icons.security_rounded,
-                  iconColor: AppColors.green,
-                  label: 'Keamanan',
-                  onTap: () => widget.onAction('Pengaturan keamanan tersedia.'),
-                ),
-                Divider(color: AppColors.of(context).line, height: 1),
                 ProfileRow(
                   icon: Icons.language_rounded,
                   iconColor: AppColors.violet,
@@ -304,6 +303,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
       };
 }
 
+class _SosButton extends StatelessWidget {
+  const _SosButton({
+    this.doctorName,
+    required this.onAction,
+  });
+
+  final String? doctorName;
+  final ValueChanged<String> onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final sosColor = const Color(0xFFFF5A5A);
+    final name = doctorName ?? 'Dokter Saka';
+    return SizedBox(
+      width: double.infinity,
+      height: 54,
+      child: FilledButton.icon(
+        onPressed: () {
+          onAction('Menghubungi $name (WhatsApp): +62 812-3456-7890');
+        },
+        icon: const Icon(Icons.phone_in_talk_rounded, size: 20),
+        label: const Text('Hubungi Dokter Penanggung Jawab'),
+        style: FilledButton.styleFrom(
+          backgroundColor: sosColor.withValues(alpha: .12),
+          foregroundColor: sosColor,
+          textStyle: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 15,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          elevation: 0,
+        ),
+      ),
+    );
+  }
+}
+
 class _InfoRow extends StatelessWidget {
   const _InfoRow({
     required this.icon,
@@ -312,17 +350,26 @@ class _InfoRow extends StatelessWidget {
     required this.label,
     required this.value,
     this.trailing = false,
+    this.placeholder,
   });
 
   final IconData icon;
   final Color iconBg;
   final Color iconColor;
   final String label;
-  final String value;
+
+  /// Actual value. If null or empty, [placeholder] is shown in muted style.
+  final String? value;
+
+  /// Placeholder text shown when [value] is null/empty.
+  final String? placeholder;
   final bool trailing;
+
+  bool get _isEmpty => value == null || value!.trim().isEmpty;
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 15),
       child: Row(
@@ -344,25 +391,35 @@ class _InfoRow extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    color: AppColors.of(context).muted,
+                    color: colors.muted,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: TextStyle(
-                    color: AppColors.of(context).text,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14.5,
-                  ),
-                ),
+                _isEmpty
+                    ? Text(
+                        placeholder ?? 'Belum diisi',
+                        style: TextStyle(
+                          color: colors.muted,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      )
+                    : Text(
+                        value!,
+                        style: TextStyle(
+                          color: colors.text,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14.5,
+                        ),
+                      ),
               ],
             ),
           ),
           if (trailing)
-            Icon(Icons.chevron_right_rounded, color: AppColors.of(context).muted),
+            Icon(Icons.chevron_right_rounded, color: colors.muted),
         ],
       ),
     );

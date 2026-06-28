@@ -422,16 +422,10 @@ class NotifCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
-        padding: const EdgeInsets.all(17),
         decoration: BoxDecoration(
           color: c.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border(
-            left: BorderSide(color: color, width: 4),
-            right: BorderSide(color: c.line),
-            top: BorderSide(color: c.line),
-            bottom: BorderSide(color: c.line),
-          ),
+          border: Border.all(color: c.line),
           boxShadow: const [
             BoxShadow(
               color: Color(0x18000000),
@@ -440,58 +434,77 @@ class NotifCard extends StatelessWidget {
             ),
           ],
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: AppColors.tint(color),
-                borderRadius: BorderRadius.circular(13),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            children: [
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: Container(
+                  width: 4,
+                  color: color,
+                ),
               ),
-              child: Icon(icon, color: color, size: 22),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: TextStyle(
-                            color: c.text,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 14.5,
-                          ),
-                        ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(21, 17, 17, 17),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: AppColors.tint(color),
+                        borderRadius: BorderRadius.circular(13),
                       ),
-                      Text(
-                        time,
-                        style: TextStyle(
-                          color: c.muted,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    desc,
-                    style: TextStyle(
-                      color: c.muted,
-                      fontSize: 13,
-                      height: 1.5,
+                      child: Icon(icon, color: color, size: 22),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  title,
+                                  style: TextStyle(
+                                    color: c.text,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 14.5,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                time,
+                                style: TextStyle(
+                                  color: c.muted,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            desc,
+                            style: TextStyle(
+                              color: c.muted,
+                              fontSize: 13,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

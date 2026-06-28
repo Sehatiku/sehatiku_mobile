@@ -30,16 +30,17 @@ class _RecordScreenState extends State<RecordScreen> {
   int _stressIndex = 1; // 0=Santai, 1=Normal, 2=Tinggi
   bool _smoke = false;
   bool _alcohol = false;
-  bool _initialized = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_initialized) return;
-    _initialized = true;
-    // Prep from existing record if logged today.
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadToday());
+  }
+
+  void _loadToday() {
     final today = HealthScope.of(context).today;
-    if (today != null) {
+    if (today == null || !mounted) return;
+    setState(() {
       if (today.bloodSugar != null) {
         _bsController.text = today.bloodSugar.toString();
       }
@@ -49,23 +50,28 @@ class _RecordScreenState extends State<RecordScreen> {
       if (today.diastolic != null) {
         _diaController.text = today.diastolic.toString();
       }
-      _medicineTaken = today.medicineTaken;
       if (today.weight != null) {
-        _weightController.text = today.weight.toString();
+        _weightController.text = _formatNum(today.weight!);
       }
       if (today.sleepHours != null) {
-        _sleepController.text = today.sleepHours.toString();
+        _sleepController.text = _formatNum(today.sleepHours!);
       }
+      _medicineTaken = today.medicineTaken;
+      _meals
+        ..clear()
+        ..addAll(today.meals);
       _active30 = today.active30;
       _sleepQuality = today.sleepQuality;
       _stressIndex = today.stressIndex;
       _smoke = today.smoke;
       _alcohol = today.alcohol;
-      _meals
-        ..clear()
-        ..addAll(today.meals);
-      _noteController.text = today.note;
-    }
+      if (today.note.isNotEmpty) _noteController.text = today.note;
+    });
+  }
+
+  String _formatNum(num value) {
+    if (value == value.toInt()) return value.toInt().toString();
+    return value.toString();
   }
 
   @override

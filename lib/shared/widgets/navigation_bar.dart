@@ -160,13 +160,22 @@ class _NotchedBarPainter extends CustomPainter {
       ..arcToPoint(Offset(r, 0), radius: const Radius.circular(r))
       ..close();
 
-    // Soft brand-tinted drop shadow.
-    final shadow = Paint()
-      ..color = AppColors.primary.withValues(alpha: .14)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
+    // 1. Ambient structural shadow.
+    final ambientShadow = Paint()
+      ..color = colors.line.withValues(alpha: 0.12)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
     canvas.save();
-    canvas.translate(0, 10);
-    canvas.drawPath(path, shadow);
+    canvas.translate(0, 4);
+    canvas.drawPath(path, ambientShadow);
+    canvas.restore();
+
+    // 2. Wide glowing brand shadow for high-end floating feel.
+    final brandShadow = Paint()
+      ..color = AppColors.primary.withValues(alpha: 0.12)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 22);
+    canvas.save();
+    canvas.translate(0, 12);
+    canvas.drawPath(path, brandShadow);
     canvas.restore();
 
     // Adaptive gradient background matching the current theme surface.
@@ -175,17 +184,27 @@ class _NotchedBarPainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          colors.surface.withValues(alpha: 0.88),
-          colors.background.withValues(alpha: 0.78),
+          colors.surface.withValues(alpha: 0.90),
+          colors.background.withValues(alpha: 0.80),
         ],
       ).createShader(Rect.fromLTWH(0, 0, w, h));
     canvas.drawPath(path, fill);
 
-    // Hairline top edge for a crisp, premium finish.
+    // Hairline border gradient for dynamic glass refraction.
     final stroke = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2
-      ..color = colors.line;
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Colors.white.withValues(
+            alpha: colors.text == AppColors.dark.text ? 0.22 : 0.45,
+          ),
+          colors.line.withValues(alpha: 0.35),
+          AppColors.primary.withValues(alpha: 0.15),
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, w, h));
     canvas.drawPath(path, stroke);
   }
 
@@ -213,6 +232,29 @@ class _CuteNavItem extends StatelessWidget {
     final c = AppColors.of(context);
     final idleColor = c.muted;
     final labelColor = selected ? AppColors.primary : idleColor;
+
+    // Apply gradient color mask to the icon when active.
+    Widget iconWidget = Icon(
+      selected ? activeIcon : icon,
+      color: selected ? Colors.white : idleColor,
+      size: 20,
+    );
+
+    if (selected) {
+      iconWidget = ShaderMask(
+        shaderCallback: (bounds) => const LinearGradient(
+          colors: [AppColors.primary, AppColors.violet],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ).createShader(bounds),
+        child: Icon(
+          activeIcon,
+          color: Colors.white,
+          size: 21,
+        ),
+      );
+    }
+
     return Expanded(
       child: Semantics(
         button: true,
@@ -229,73 +271,47 @@ class _CuteNavItem extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Active icon lifts into a brand-gradient pill; idle stays flat.
-                AnimatedSlide(
-                  duration: const Duration(milliseconds: 300),
+                // Smooth elastic scale animation for active tab.
+                AnimatedScale(
+                  duration: const Duration(milliseconds: 320),
                   curve: Curves.easeOutBack,
-                  offset: selected ? const Offset(0, -0.06) : Offset.zero,
+                  scale: selected ? 1.10 : 1.0,
                   child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 280),
-                    curve: Curves.easeOut,
-                    width: selected ? 46 : 40,
+                    duration: const Duration(milliseconds: 240),
+                    curve: Curves.easeOutCubic,
+                    width: 44,
                     height: 32,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      gradient: selected
-                          ? const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [AppColors.primary, AppColors.violet],
+                      borderRadius: BorderRadius.circular(12),
+                      color: selected
+                          ? AppColors.primary.withValues(alpha: 0.12)
+                          : Colors.transparent,
+                      border: selected
+                          ? Border.all(
+                              color: AppColors.primary.withValues(alpha: 0.25),
+                              width: 1.0,
                             )
-                          : null,
-                      boxShadow: selected
-                          ? [
-                              BoxShadow(
-                                color: AppColors.primary.withValues(alpha: .38),
-                                blurRadius: 14,
-                                offset: const Offset(0, 7),
-                              ),
-                            ]
-                          : null,
+                          : Border.all(
+                              color: Colors.transparent,
+                              width: 1.0,
+                            ),
                     ),
-                    child: Icon(
-                      selected ? activeIcon : icon,
-                      color: selected ? Colors.white : idleColor,
-                      size: 21,
-                    ),
+                    child: iconWidget,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 AnimatedDefaultTextStyle(
-                  duration: const Duration(milliseconds: 240),
+                  duration: const Duration(milliseconds: 200),
                   style: TextStyle(
                     color: labelColor,
-                    fontSize: 10.5,
-                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                    height: 1,
+                    fontSize: 10,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    height: 1.1,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   child: Text(label, textAlign: TextAlign.center),
-                ),
-                // Glowing indicator dot below active item
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  margin: const EdgeInsets.only(top: 3),
-                  width: selected ? 5 : 0,
-                  height: selected ? 5 : 0,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.6),
-                        blurRadius: 4,
-                        spreadRadius: 1,
-                      ),
-                    ],
-                  ),
                 ),
               ],
             ),
@@ -319,15 +335,21 @@ class _SparkleFab extends StatefulWidget {
 }
 
 class _SparkleFabState extends State<_SparkleFab>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _bob = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 2800),
   )..repeat(reverse: true);
 
+  late final AnimationController _rotate = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 6),
+  )..repeat();
+
   @override
   void dispose() {
     _bob.dispose();
+    _rotate.dispose();
     super.dispose();
   }
 
@@ -344,48 +366,77 @@ class _SparkleFabState extends State<_SparkleFab>
           widget.onTap();
         },
         child: AnimatedBuilder(
-          animation: _bob,
+          animation: Listenable.merge([_bob, _rotate]),
           builder: (context, _) {
             final t = Curves.easeInOut.transform(_bob.value);
-            // Gentle vertical bob + breathing glow — no spin, keeps it elegant.
+            final rotationAngle = _rotate.value * 2 * 3.141592653589793;
+            // Gentle vertical bob + breathing glow
             return Transform.translate(
               offset: Offset(0, -4 * t),
               child: AnimatedScale(
                 duration: const Duration(milliseconds: 260),
                 curve: Curves.easeOutBack,
-                scale: widget.selected ? 1.06 : 1.0,
-                child: Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [AppColors.primary, AppColors.violet],
-                    ),
-                    boxShadow: [
-                      // Ring matching the active background theme.
-                      BoxShadow(
-                        color: c.background,
-                        spreadRadius: 6,
+                scale: widget.selected ? 1.08 : 1.0,
+                child: Stack(
+                  alignment: Alignment.center,
+                  clipBehavior: Clip.none,
+                  children: [
+                    // The glowing rotating outer ring (aura)
+                    Transform.rotate(
+                      angle: rotationAngle,
+                      child: Container(
+                        width: 66,
+                        height: 66,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: SweepGradient(
+                            colors: [
+                              AppColors.primary.withValues(alpha: 0.0),
+                              AppColors.primary.withValues(alpha: 0.45),
+                              AppColors.violet.withValues(alpha: 0.45),
+                              AppColors.primary.withValues(alpha: 0.0),
+                            ],
+                            stops: const [0.0, 0.4, 0.6, 1.0],
+                          ),
+                        ),
                       ),
-                      BoxShadow(
-                        color: AppColors.violet.withValues(alpha: .45 + .18 * t),
-                        blurRadius: 18 + 12 * t,
-                        offset: const Offset(0, 12),
-                      ),
-                    ],
-                  ),
-                  child: Transform.scale(
-                    // Twinkling sparkle.
-                    scale: 0.94 + 0.12 * t,
-                    child: const Icon(
-                      Icons.auto_awesome_rounded,
-                      color: Colors.white,
-                      size: 26,
                     ),
-                  ),
+                    // The main button body
+                    Container(
+                      width: 58,
+                      height: 58,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [AppColors.primary, AppColors.violet],
+                        ),
+                        boxShadow: [
+                          // Thick ring matching the background theme
+                          BoxShadow(
+                            color: c.background,
+                            spreadRadius: 3,
+                          ),
+                          // Premium soft glowing shadow
+                          BoxShadow(
+                            color: AppColors.violet.withValues(alpha: .4 + .15 * t),
+                            blurRadius: 14 + 10 * t,
+                            offset: Offset(0, 6 + 4 * t),
+                          ),
+                        ],
+                      ),
+                      child: Transform.scale(
+                        // Twinkling sparkle.
+                        scale: 0.94 + 0.1 * t,
+                        child: const Icon(
+                          Icons.auto_awesome_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             );
