@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:sehatiku_mobile/core/core.dart';
 import 'package:sehatiku_mobile/data/models/assigned_nakes_info.dart';
@@ -284,15 +285,29 @@ class _DoctorScreenState extends State<DoctorScreen> {
                 child: SizedBox(
                   height: 54,
                   child: OutlinedButton.icon(
-                    onPressed: () {
+                    onPressed: () async {
                       final waLink = doctor.waLink;
                       final phone = doctor.whatsappPhone;
+
+                      final String? urlString;
                       if (waLink != null && waLink.isNotEmpty) {
-                        widget.onAction('Membuka chat WhatsApp dokter ($waLink).');
+                        urlString = waLink;
                       } else if (phone.isNotEmpty) {
-                        widget.onAction('Membuka chat WhatsApp dokter (https://wa.me/$phone).');
+                        urlString = 'https://wa.me/$phone';
                       } else {
+                        urlString = null;
+                      }
+
+                      if (urlString == null) {
                         widget.onAction('Nomor WhatsApp dokter tidak tersedia.');
+                        return;
+                      }
+
+                      final uri = Uri.parse(urlString);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      } else {
+                        widget.onAction('Tidak dapat membuka WhatsApp. Pastikan WhatsApp terinstal.');
                       }
                     },
                     icon: const Icon(Icons.chat_bubble_rounded, size: 20),
