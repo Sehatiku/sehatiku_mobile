@@ -8,16 +8,18 @@ class DashboardService {
   DashboardService._();
   static final DashboardService instance = DashboardService._();
 
+  PatientDashboard? _cachedDashboard;
+
+  PatientDashboard? get cachedDashboard => _cachedDashboard;
+
   /// GET /api/v1/patients/dashboard
-  ///
-  /// Requires a valid patient Bearer JWT (attached automatically by
-  /// [AuthInterceptor]).  Throws [ApiException] on any API error.
   Future<PatientDashboard> fetchDashboard() async {
     try {
-      final resp = await ApiClient.instance.get(
-        '/api/v1/patients/dashboard',
-      );
-      return PatientDashboard.fromJson(resp.data as Map<String, dynamic>);
+      final resp = await ApiClient.instance.get('/api/v1/patients/dashboard');
+      final dashboard =
+          PatientDashboard.fromJson(resp.data as Map<String, dynamic>);
+      _cachedDashboard = dashboard;
+      return dashboard;
     } on DioException catch (e) {
       throw apiExceptionFrom(e);
     }

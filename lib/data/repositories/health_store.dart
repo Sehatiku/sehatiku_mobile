@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:sehatiku_mobile/data/models/health_record.dart';
+import 'package:sehatiku_mobile/data/models/history_entry.dart';
 
 /// Holds every saved [HealthRecord] and persists them to device storage.
 /// Screens listen via [HealthScope] and rebuild whenever data changes.
@@ -11,8 +12,10 @@ class HealthStore extends ChangeNotifier {
   HealthStore();
 
   static const _storageKey = 'sehatiku_records_v1';
+  static const _pendingSyncKey = 'sehatiku_pending_syncs_v1';
 
   final List<HealthRecord> _records = [];
+  final Set<String> _pendingSyncDates = {};
   bool _loaded = false;
 
   bool get isLoaded => _loaded;
@@ -36,6 +39,29 @@ class HealthStore extends ChangeNotifier {
   }
 
   HealthRecord? get today => recordFor(DateTime.now());
+
+  bool get hasPendingSync => _pendingSyncDates.isNotEmpty;
+
+  bool isPendingSync(DateTime date) {
+    final key = HealthRecord.dayOf(date).toIso8601String();
+    return _pendingSyncDates.contains(key);
+  }
+
+  Future<void> markPendingSync(DateTime date) async {
+    final key = HealthRecord.dayOf(date).toIso8601String();
+    if (_pendingSyncDates.add(key)) {
+      notifyListeners();
+      await _persistPendingSyncs();
+    }
+  }
+
+  Future<void> clearPendingSync(DateTime date) async {
+    final key = HealthRecord.dayOf(date).toIso8601String();
+    if (_pendingSyncDates.remove(key)) {
+      notifyListeners();
+      await _persistPendingSyncs();
+    }
+  }
 
   /// The last [count] records ordered oldest -> newest (for charts).
   List<HealthRecord> recent(int count) {
@@ -71,6 +97,12 @@ class HealthStore extends ChangeNotifier {
         _records.clear();
       }
     }
+    final rawPending = prefs.getStringList(_pendingSyncKey);
+    if (rawPending != null) {
+      _pendingSyncDates
+        ..clear()
+        ..addAll(rawPending);
+    }
     _loaded = true;
     notifyListeners();
   }
@@ -81,11 +113,42 @@ class HealthStore extends ChangeNotifier {
     await prefs.setString(_storageKey, raw);
   }
 
+  Future<void> _persistPendingSyncs() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_pendingSyncKey, _pendingSyncDates.toList());
+  }
+
   /// Insert or replace the record for its calendar day.
   Future<void> upsert(HealthRecord record) async {
     final key = HealthRecord.dayOf(record.date);
     _records.removeWhere((r) => r.date == key);
     _records.add(record);
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> mergeHistory(List<HistoryEntry> entries) async {
+    for (final entry in entries) {
+      final key = HealthRecord.dayOf(entry.date);
+      final existingIndex = _records.indexWhere((r) => r.date == key);
+      if (existingIndex != -1) {
+        final existing = _records[existingIndex];
+        _records[existingIndex] = existing.copyWith(
+          bloodSugar: entry.bloodSugar,
+          systolic: entry.systolic,
+          diastolic: entry.diastolic,
+          weight: entry.weight,
+        );
+      } else {
+        _records.add(HealthRecord(
+          date: key,
+          bloodSugar: entry.bloodSugar,
+          systolic: entry.systolic,
+          diastolic: entry.diastolic,
+          weight: entry.weight,
+        ));
+      }
+    }
     notifyListeners();
     await _persist();
   }
@@ -99,10 +162,12 @@ class HealthStore extends ChangeNotifier {
 
   Future<void> clear() async {
     _records.clear();
+    _pendingSyncDates.clear();
     _loaded = false;
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_storageKey);
+    await prefs.remove(_pendingSyncKey);
   }
 }
 

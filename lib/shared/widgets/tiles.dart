@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:sehatiku_mobile/core/core.dart';
-
+import 'package:sehatiku_mobile/data/models/health_record.dart';
 import 'package:sehatiku_mobile/shared/widgets/widgets.dart';
 
 class InsightTile extends StatelessWidget {
@@ -514,24 +514,195 @@ class NotifCard extends StatelessWidget {
 class HistoryNode extends StatelessWidget {
   const HistoryNode({
     super.key,
-    required this.date,
-    required this.score,
-    required this.scoreColor,
-    required this.scoreBg,
-    required this.desc,
+    required this.record,
     this.last = false,
   });
 
-  final String date;
-  final String score;
-  final Color scoreColor;
-  final Color scoreBg;
-  final String desc;
+  final HealthRecord record;
   final bool last;
+
+  Widget _buildMetricChip(
+    BuildContext context, {
+    required IconData icon,
+    required Color color,
+    required String label,
+    required String value,
+  }) {
+    final c = AppColors.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: isDark ? c.elevated : const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDark ? c.line : const Color(0xFFE2E8F0),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: c.muted,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              color: c.text,
+              fontSize: 11.5,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final scoreColor = record.statusColor;
+    final scoreBg = record.statusBg;
+    final scoreLabel = record.statusLabel;
+
+    final chips = <Widget>[];
+
+    // 1. Blood Sugar
+    if (record.bloodSugar != null) {
+      final tag = bloodSugarTagLabels[record.bloodSugarTag];
+      final tagStr = tag != null ? ' ($tag)' : '';
+      chips.add(_buildMetricChip(
+        context,
+        icon: Icons.water_drop_rounded,
+        color: bloodSugarColor(record.bloodSugar),
+        label: 'Gula: ',
+        value: '${record.bloodSugar} mg/dL$tagStr',
+      ));
+    }
+
+    // 2. Blood Pressure
+    if (record.systolic != null && record.diastolic != null) {
+      chips.add(_buildMetricChip(
+        context,
+        icon: Icons.favorite_rounded,
+        color: bloodPressureColor(record.systolic, record.diastolic),
+        label: 'TD: ',
+        value: '${record.systolic}/${record.diastolic} mmHg',
+      ));
+    }
+
+    // 3. Weight
+    if (record.weight != null) {
+      final w = record.weight!.toStringAsFixed(record.weight! % 1 == 0 ? 0 : 1);
+      chips.add(_buildMetricChip(
+        context,
+        icon: Icons.scale_rounded,
+        color: AppColors.primary,
+        label: 'Berat: ',
+        value: '$w kg',
+      ));
+    }
+
+    // 4. Medicine
+    final String medValue;
+    if (record.medicineTaken) {
+      if (record.medicineName.isNotEmpty) {
+        final timeStr = record.medicineTime.isNotEmpty ? ' (${record.medicineTime})' : '';
+        medValue = '${record.medicineName}$timeStr';
+      } else {
+        medValue = 'Tepat Waktu';
+      }
+    } else {
+      medValue = 'Terlewat';
+    }
+    chips.add(_buildMetricChip(
+      context,
+      icon: Icons.medication_rounded,
+      color: record.medicineTaken ? AppColors.green : AppColors.red,
+      label: 'Obat: ',
+      value: medValue,
+    ));
+
+    // 5. Activity
+    if (record.active30 || record.activityMinutes > 0) {
+      final actValue = record.activityType.isNotEmpty
+          ? '${record.activityType} (${record.activityMinutes} mnt)'
+          : '${record.activityMinutes} mnt';
+      chips.add(_buildMetricChip(
+        context,
+        icon: Icons.directions_run_rounded,
+        color: record.activityMinutes >= 30 ? AppColors.green : AppColors.orange,
+        label: 'Aktivitas: ',
+        value: actValue,
+      ));
+    }
+
+    // 6. Sleep
+    if (record.sleepHours != null) {
+      final sh = record.sleepHours!.toStringAsFixed(record.sleepHours! % 1 == 0 ? 0 : 1);
+      chips.add(_buildMetricChip(
+        context,
+        icon: Icons.bedtime_rounded,
+        color: AppColors.violet,
+        label: 'Tidur: ',
+        value: '${sh}j',
+      ));
+    }
+
+    // 7. Stress Level
+    final stressLabel = record.stressIndex == 0
+        ? 'Santai'
+        : record.stressIndex == 2
+            ? 'Tinggi'
+            : 'Normal';
+    final stressColor = record.stressIndex == 0
+        ? AppColors.green
+        : record.stressIndex == 2
+            ? AppColors.red
+            : AppColors.primary;
+    final stressEmoji = record.stressIndex == 0
+        ? '😌'
+        : record.stressIndex == 2
+            ? '😣'
+            : '😐';
+    chips.add(_buildMetricChip(
+      context,
+      icon: Icons.psychology_rounded,
+      color: stressColor,
+      label: 'Stres: ',
+      value: '$stressEmoji $stressLabel',
+    ));
+
+    // 8. Smoking & Alcohol
+    if (record.smoke) {
+      chips.add(_buildMetricChip(
+        context,
+        icon: Icons.smoking_rooms_rounded,
+        color: AppColors.orange,
+        label: 'Merokok: ',
+        value: 'Ya',
+      ));
+    }
+    if (record.alcohol) {
+      chips.add(_buildMetricChip(
+        context,
+        icon: Icons.local_bar_rounded,
+        color: AppColors.orange,
+        label: 'Alkohol: ',
+        value: 'Ya',
+      ));
+    }
+
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -575,7 +746,7 @@ class HistoryNode extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            date,
+                            formatLongDate(record.date),
                             style: TextStyle(
                               color: c.text,
                               fontWeight: FontWeight.w800,
@@ -594,7 +765,7 @@ class HistoryNode extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            score,
+                            'Skor ${record.score} • $scoreLabel',
                             style: TextStyle(
                               color: scoreColor,
                               fontWeight: FontWeight.w800,
@@ -604,15 +775,53 @@ class HistoryNode extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 7),
-                    Text(
-                      desc,
-                      style: TextStyle(
-                        color: c.muted,
-                        fontSize: 12.5,
-                        height: 1.5,
-                      ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: chips,
                     ),
+                    if (record.note.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? c.background.withValues(alpha: 0.3)
+                              : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isDark
+                                ? c.line.withValues(alpha: 0.5)
+                                : const Color(0xFFE2E8F0),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.sticky_note_2_rounded,
+                              size: 16,
+                              color: c.muted,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                record.note,
+                                style: TextStyle(
+                                  color: c.text.withValues(alpha: 0.85),
+                                  fontSize: 12.5,
+                                  fontStyle: FontStyle.italic,
+                                  height: 1.45,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -623,3 +832,4 @@ class HistoryNode extends StatelessWidget {
     );
   }
 }
+

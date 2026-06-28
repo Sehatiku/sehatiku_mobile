@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
 import 'package:sehatiku_mobile/core/core.dart';
-
 import 'package:sehatiku_mobile/data/models/health_record.dart';
+import 'package:sehatiku_mobile/data/models/history_entry.dart';
 import 'package:sehatiku_mobile/data/repositories/health_store.dart';
+import 'package:sehatiku_mobile/data/repositories/auth_store.dart';
+import 'package:sehatiku_mobile/data/services/record_service.dart';
+import 'package:sehatiku_mobile/data/services/api_client.dart';
 import 'package:sehatiku_mobile/shared/widgets/widgets.dart';
 
 String recordSummary(HealthRecord r) {
@@ -20,8 +23,15 @@ String recordSummary(HealthRecord r) {
       'Berat ${r.weight!.toStringAsFixed(r.weight! % 1 == 0 ? 0 : 1)} kg',
     );
   }
-  parts.add(r.medicineTaken ? 'Obat tepat waktu' : 'Obat terlewat');
-  if (r.active30) parts.add('Aktif ≥30 mnt');
+  if (r.medicineTaken) {
+    parts.add(r.medicineName.isNotEmpty ? 'Obat: ${r.medicineName}' : 'Obat tepat waktu');
+  } else {
+    parts.add('Obat terlewat');
+  }
+  if (r.active30 || r.activityMinutes > 0) {
+    final actName = r.activityType.isNotEmpty ? r.activityType : 'Aktif';
+    parts.add('$actName ${r.activityMinutes} mnt');
+  }
   if (r.sleepHours != null) {
     final h = r.sleepHours!.toStringAsFixed(r.sleepHours! % 1 == 0 ? 0 : 1);
     parts.add('Tidur ${h}j');
@@ -42,6 +52,17 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   final _searchController = TextEditingController();
   String _query = '';
+  
+  bool _isLoading = true;
+  String? _errorMessage;
+  List<HistoryEntry> _apiEntries = [];
+  bool _isFallback = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchHistory();
+  }
 
   @override
   void dispose() {
@@ -49,11 +70,69 @@ class _HistoryScreenState extends State<HistoryScreen> {
     super.dispose();
   }
 
+  Future<void> _fetchHistory() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+      _isFallback = false;
+    });
+    try {
+      final entries = await RecordService.instance.fetchHistory(limit: 30);
+      if (mounted) {
+        final store = HealthScope.of(context);
+        await store.mergeHistory(entries);
+        setState(() {
+          _apiEntries = entries;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isFallback = true;
+          _isLoading = false;
+          if (e is ApiException && e.statusCode == 401) {
+            _errorMessage = 'Sesi Anda telah berakhir. Silakan login kembali.';
+            AuthStore.instance.clear();
+          } else {
+            _errorMessage = 'Menampilkan data lokal – tidak dapat terhubung ke server.';
+          }
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = HealthScope.of(context);
     final query = _query.trim().toLowerCase();
-    final all = store.records;
+
+    // Map API entries to HealthRecords dynamically
+    final apiRecords = _apiEntries.map((e) {
+      final existing = store.recordFor(e.date);
+      return HealthRecord(
+        date: e.date,
+        bloodSugar: e.bloodSugar,
+        systolic: e.systolic,
+        diastolic: e.diastolic,
+        weight: e.weight,
+        medicineTaken: existing?.medicineTaken ?? false,
+        medicineName: existing?.medicineName ?? '',
+        medicineTime: existing?.medicineTime ?? '',
+        meals: existing?.meals ?? {},
+        active30: existing?.active30 ?? false,
+        activityMinutes: existing?.activityMinutes ?? 0,
+        activityType: existing?.activityType ?? '',
+        sleepHours: existing?.sleepHours,
+        sleepQuality: existing?.sleepQuality ?? 1,
+        stressIndex: existing?.stressIndex ?? 1,
+        smoke: existing?.smoke ?? false,
+        alcohol: existing?.alcohol ?? false,
+        note: existing?.note ?? '',
+      );
+    }).toList();
+
+    final all = _isFallback ? store.records : apiRecords;
     final filtered = query.isEmpty
         ? all
         : all.where((r) {
@@ -63,12 +142,53 @@ class _HistoryScreenState extends State<HistoryScreen> {
             return hay.contains(query);
           }).toList();
 
-    return DetailScaffold(
-      title: 'Riwayat Kesehatan',
-      onBack: widget.onBack,
-      child: Column(
+    Widget content;
+
+    if (_isLoading) {
+      content = const Center(
+        child: Padding(
+          padding: EdgeInsets.only(top: 80),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    } else {
+      content = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (_isFallback) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.amber.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.amber.withValues(alpha: .3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.offline_bolt_rounded,
+                    color: AppColors.amber,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _errorMessage ?? 'Menampilkan data lokal – tidak dapat terhubung ke server.',
+                      style: TextStyle(
+                        color: AppColors.of(context).text,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
           Container(
             height: 50,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -102,6 +222,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     decoration: const InputDecoration(
                       isDense: true,
                       border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      filled: false,
+                      contentPadding: EdgeInsets.zero,
                       hintText: 'Cari tanggal atau catatan…',
                       hintStyle: TextStyle(
                         color: Color(0xFF9AA9BB),
@@ -133,10 +257,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ),
           const SizedBox(height: 20),
           if (all.isEmpty)
-            const _HistoryEmpty(
+            _HistoryEmpty(
               icon: Icons.history_rounded,
-              message:
-                  'Belum ada riwayat. Catatan harian yang Anda simpan akan muncul di sini.',
+              message: _isFallback
+                  ? 'Belum ada riwayat. Catatan harian yang Anda simpan akan muncul di sini.'
+                  : 'Belum ada riwayat catatan di server.',
             )
           else if (filtered.isEmpty)
             const _HistoryEmpty(
@@ -146,14 +271,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
           else
             for (var i = 0; i < filtered.length; i++)
               HistoryNode(
-                date: formatLongDate(filtered[i].date),
-                score: 'Skor ${filtered[i].score}',
-                scoreColor: filtered[i].statusColor,
-                scoreBg: filtered[i].statusBg,
-                desc: recordSummary(filtered[i]),
+                record: filtered[i],
                 last: i == filtered.length - 1,
               ),
         ],
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _fetchHistory,
+      child: DetailScaffold(
+        title: 'Riwayat Kesehatan',
+        onBack: widget.onBack,
+        child: content,
       ),
     );
   }
@@ -197,4 +327,3 @@ class _HistoryEmpty extends StatelessWidget {
     );
   }
 }
-
