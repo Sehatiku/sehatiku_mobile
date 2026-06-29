@@ -516,10 +516,12 @@ class HistoryNode extends StatelessWidget {
     super.key,
     required this.record,
     this.last = false,
+    this.onTap,
   });
 
   final HealthRecord record;
   final bool last;
+  final VoidCallback? onTap;
 
   Widget _buildMetricChip(
     BuildContext context, {
@@ -736,10 +738,13 @@ class HistoryNode extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: EdgeInsets.only(bottom: last ? 0 : 14),
-              child: AppCard(
-                padding: 17,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              child: GestureDetector(
+                onTap: onTap,
+                behavior: HitTestBehavior.opaque,
+                child: AppCard(
+                  padding: 17,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -827,9 +832,9 @@ class HistoryNode extends StatelessWidget {
               ),
             ),
           ),
+        ),
         ],
       ),
     );
   }
 }
-

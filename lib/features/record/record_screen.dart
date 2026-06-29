@@ -4,14 +4,21 @@ import 'package:flutter/services.dart';
 import 'package:sehatiku_mobile/core/core.dart';
 import 'package:sehatiku_mobile/data/models/health_record.dart';
 import 'package:sehatiku_mobile/data/repositories/health_store.dart';
+import 'package:sehatiku_mobile/data/services/api_client.dart';
 import 'package:sehatiku_mobile/data/services/record_service.dart';
 import 'package:sehatiku_mobile/shared/widgets/widgets.dart';
 
 class RecordScreen extends StatefulWidget {
-  const RecordScreen({super.key, required this.onSaved, required this.onView});
+  const RecordScreen({
+    super.key,
+    required this.onSaved,
+    required this.onView,
+    this.initialDate,
+  });
 
   final ValueChanged<String> onSaved;
   final ValueChanged<MainView> onView;
+  final DateTime? initialDate;
 
   @override
   State<RecordScreen> createState() => _RecordScreenState();
@@ -41,55 +48,99 @@ class _RecordScreenState extends State<RecordScreen> {
   bool _alcohol = false;
 
   int _currentTab = 0; // 0: Vital, 1: Aktivitas, 2: Kondisi
+  late DateTime _selectedDate;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadToday());
+    _selectedDate = widget.initialDate ?? DateTime.now();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadRecordForDate(_selectedDate));
   }
 
-  void _loadToday() {
-    final today = HealthScope.of(context).today;
-    if (today == null || !mounted) return;
+  @override
+  void didUpdateWidget(covariant RecordScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialDate != oldWidget.initialDate && widget.initialDate != null) {
+      setState(() {
+        _selectedDate = widget.initialDate!;
+      });
+      _loadRecordForDate(widget.initialDate!);
+    }
+  }
+
+  void _loadRecordForDate(DateTime date) {
+    final record = HealthScope.of(context).recordFor(date);
+    if (!mounted) return;
     setState(() {
-      if (today.bloodSugar != null) {
-        _bsController.text = today.bloodSugar.toString();
+      if (record == null) {
+        _bsController.clear();
+        _sysController.clear();
+        _diaController.clear();
+        _weightController.clear();
+        _sleepController.clear();
+        _noteController.clear();
+        _medicineNameController.clear();
+        _medicineTimeController.clear();
+        _customActivityController.clear();
+        _activityMinutesController.clear();
+        _medicineTaken = false;
+        _meals.clear();
+        _active30 = false;
+        _sleepQuality = 1;
+        _stressIndex = 1;
+        _smoke = false;
+        _alcohol = false;
+        _selectedActivityType = 'Jalan Kaki';
+        return;
       }
-      if (today.systolic != null) {
-        _sysController.text = today.systolic.toString();
-      }
-      if (today.diastolic != null) {
-        _diaController.text = today.diastolic.toString();
-      }
-      if (today.weight != null) {
-        _weightController.text = _formatNum(today.weight!);
-      }
-      if (today.sleepHours != null) {
-        _sleepController.text = _formatNum(today.sleepHours!);
-      }
-      _medicineTaken = today.medicineTaken;
-      if (_medicineTaken) {
-        _medicineNameController.text = today.medicineName.isEmpty ? 'Metformin' : today.medicineName;
-        _medicineTimeController.text = today.medicineTime.isEmpty ? '09:00' : today.medicineTime;
+      if (record.bloodSugar != null) {
+        _bsController.text = record.bloodSugar.toString();
       } else {
-        _medicineNameController.text = today.medicineName;
-        _medicineTimeController.text = today.medicineTime;
+        _bsController.clear();
+      }
+      if (record.systolic != null) {
+        _sysController.text = record.systolic.toString();
+      } else {
+        _sysController.clear();
+      }
+      if (record.diastolic != null) {
+        _diaController.text = record.diastolic.toString();
+      } else {
+        _diaController.clear();
+      }
+      if (record.weight != null) {
+        _weightController.text = _formatNum(record.weight!);
+      } else {
+        _weightController.clear();
+      }
+      if (record.sleepHours != null) {
+        _sleepController.text = _formatNum(record.sleepHours!);
+      } else {
+        _sleepController.clear();
+      }
+      _medicineTaken = record.medicineTaken;
+      if (_medicineTaken) {
+        _medicineNameController.text = record.medicineName.isEmpty ? 'Metformin' : record.medicineName;
+        _medicineTimeController.text = record.medicineTime.isEmpty ? '09:00' : record.medicineTime;
+      } else {
+        _medicineNameController.text = record.medicineName;
+        _medicineTimeController.text = record.medicineTime;
       }
       _meals
         ..clear()
-        ..addAll(today.meals);
-      _active30 = today.active30;
-      _activityMinutesController.text = today.activityMinutes > 0 ? today.activityMinutes.toString() : (today.active30 ? '30' : '');
-      _selectedActivityType = today.activityType.isEmpty ? 'Jalan Kaki' : today.activityType;
+        ..addAll(record.meals);
+      _active30 = record.active30;
+      _activityMinutesController.text = record.activityMinutes > 0 ? record.activityMinutes.toString() : (record.active30 ? '30' : '');
+      _selectedActivityType = record.activityType.isEmpty ? 'Jalan Kaki' : record.activityType;
       if (!['Jalan Kaki', 'Bersepeda', 'Yoga', 'Senam', 'Lari'].contains(_selectedActivityType) && _selectedActivityType.isNotEmpty) {
         _customActivityController.text = _selectedActivityType;
         _selectedActivityType = 'Lainnya';
       }
-      _sleepQuality = today.sleepQuality;
-      _stressIndex = today.stressIndex;
-      _smoke = today.smoke;
-      _alcohol = today.alcohol;
-      if (today.note.isNotEmpty) _noteController.text = today.note;
+      _sleepQuality = record.sleepQuality;
+      _stressIndex = record.stressIndex;
+      _smoke = record.smoke;
+      _alcohol = record.alcohol;
+      _noteController.text = record.note;
     });
   }
 
@@ -161,7 +212,7 @@ class _RecordScreenState extends State<RecordScreen> {
         : _selectedActivityType;
 
     final record = HealthRecord(
-      date: HealthRecord.dayOf(DateTime.now()),
+      date: HealthRecord.dayOf(_selectedDate),
       bloodSugar: bs,
       systolic: sys,
       diastolic: dia,
@@ -187,8 +238,12 @@ class _RecordScreenState extends State<RecordScreen> {
     // Save to API asynchronously in background
     RecordService.instance.saveRecord(record).then((_) {
       store.clearPendingSync(record.date);
-    }).catchError((_) {
-      store.markPendingSync(record.date);
+    }).catchError((err) {
+      if (err is ApiException && err.statusCode == 400) {
+        widget.onSaved('Gagal mengirim ke server: ${err.message}');
+      } else {
+        store.markPendingSync(record.date);
+      }
     });
 
     if (mounted) {
@@ -244,9 +299,11 @@ class _RecordScreenState extends State<RecordScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Bagaimana kondisimu hari ini?',
-                      style: TextStyle(
+                    Text(
+                      HealthRecord.dayOf(_selectedDate) == HealthRecord.dayOf(DateTime.now())
+                          ? 'Bagaimana kondisimu hari ini?'
+                          : 'Bagaimana kondisimu pada tanggal ini?',
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -254,7 +311,7 @@ class _RecordScreenState extends State<RecordScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      formatLongDate(DateTime.now()),
+                      formatLongDate(_selectedDate),
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.75),
                         fontSize: 11,
@@ -1538,6 +1595,63 @@ class _RecordScreenState extends State<RecordScreen> {
     );
   }
 
+  Widget _buildDateSelector(AppColors colors) {
+    final today = HealthRecord.dayOf(DateTime.now());
+    final yesterday = HealthRecord.dayOf(DateTime.now().subtract(const Duration(days: 1)));
+    
+    final isToday = HealthRecord.dayOf(_selectedDate) == today;
+    final isYesterday = HealthRecord.dayOf(_selectedDate) == yesterday;
+    final isOther = !isToday && !isYesterday;
+
+    return Row(
+      children: [
+        _DatePill(
+          label: 'Hari Ini',
+          selected: isToday,
+          onTap: () {
+            if (_selectedDate != today) {
+              setState(() => _selectedDate = today);
+              _loadRecordForDate(today);
+            }
+          },
+          colors: colors,
+        ),
+        const SizedBox(width: 8),
+        _DatePill(
+          label: 'Kemarin',
+          selected: isYesterday,
+          onTap: () {
+            if (_selectedDate != yesterday) {
+              setState(() => _selectedDate = yesterday);
+              _loadRecordForDate(yesterday);
+            }
+          },
+          colors: colors,
+        ),
+        const SizedBox(width: 8),
+        _DatePill(
+          label: isOther ? formatShortDate(_selectedDate) : 'Lainnya',
+          selected: isOther,
+          icon: Icons.calendar_today_rounded,
+          onTap: () async {
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: isOther ? _selectedDate : today,
+              firstDate: DateTime.now().subtract(const Duration(days: 90)),
+              lastDate: DateTime.now(),
+            );
+            if (picked != null) {
+              final normalized = HealthRecord.dayOf(picked);
+              setState(() => _selectedDate = normalized);
+              _loadRecordForDate(normalized);
+            }
+          },
+          colors: colors,
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
@@ -1547,8 +1661,10 @@ class _RecordScreenState extends State<RecordScreen> {
         children: [
           PageHeading(
             title: 'Catatan Harian',
-            subtitle: formatLongDate(DateTime.now()),
+            subtitle: formatLongDate(_selectedDate),
           ),
+          const SizedBox(height: 16),
+          _buildDateSelector(colors),
           const SizedBox(height: 16),
           _buildHeaderCard(),
           const SizedBox(height: 16),
@@ -1564,6 +1680,65 @@ class _RecordScreenState extends State<RecordScreen> {
           _buildNavigationButtons(colors),
           const SizedBox(height: 90), // Spacing to avoid overlay of floating navbar
         ],
+      ),
+    );
+  }
+}
+
+class _DatePill extends StatelessWidget {
+  const _DatePill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    required this.colors,
+    this.icon,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final AppColors colors;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? AppColors.primary.withValues(alpha: .15) : colors.elevated,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? AppColors.primary : colors.line,
+              width: 1.5,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (icon != null) ...[
+                Icon(
+                  icon,
+                  size: 14,
+                  color: selected ? AppColors.primary : colors.muted,
+                ),
+                const SizedBox(width: 4),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  color: selected ? AppColors.primary : colors.text,
+                  fontWeight: selected ? FontWeight.bold : FontWeight.w600,
+                  fontSize: 12.5,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

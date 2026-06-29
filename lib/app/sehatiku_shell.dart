@@ -7,6 +7,7 @@ import 'package:sehatiku_mobile/data/models/auth_models.dart';
 import 'package:sehatiku_mobile/data/repositories/health_store.dart';
 import 'package:sehatiku_mobile/data/services/auth_service.dart';
 import 'package:sehatiku_mobile/features/auth/login_screen.dart';
+import 'package:sehatiku_mobile/features/dashboard/dashboard_screen.dart';
 import 'package:sehatiku_mobile/features/home/app_home.dart';
 import 'package:sehatiku_mobile/features/onboarding/onboarding_screen.dart';
 import 'package:sehatiku_mobile/features/splash/splash_screen.dart';
@@ -35,6 +36,7 @@ class _SehatikuShellState extends State<SehatikuShell> {
   Session? _session;
 
   MainView _view = MainView.beranda;
+  DateTime? _recordInitialDate;
   int _onboardingIndex = 0;
   int _progressIndex = 0;
   int _rangeIndex = 0;
@@ -96,12 +98,14 @@ class _SehatikuShellState extends State<SehatikuShell> {
       _session = session;
       _stage = Stage.app;
       _view = MainView.beranda;
+      _recordInitialDate = null;
     });
   }
 
   Future<void> _onLogout() async {
     await HealthScope.of(context).clear();
     await AuthService.instance.logout();
+    DashboardScreen.hasShownMissingLogsThisSession = false;
     if (!mounted) return;
     setState(() {
       _session = null;
@@ -141,7 +145,19 @@ class _SehatikuShellState extends State<SehatikuShell> {
             forecastIndex: _forecastIndex,
             educationFilter: _educationFilter,
             darkMode: widget.darkMode,
-            onView: (view) => setState(() => _view = view),
+            recordDate: _recordInitialDate,
+            onView: (view) => setState(() {
+              _view = view;
+              if (view != MainView.catatan) {
+                _recordInitialDate = null;
+              }
+            }),
+            onViewRecordWithDate: (date) {
+              setState(() {
+                _recordInitialDate = date;
+                _view = MainView.catatan;
+              });
+            },
             onProgress: (value) => setState(() => _progressIndex = value),
             onRange: (value) => setState(() => _rangeIndex = value),
             onForecast: (value) => setState(() => _forecastIndex = value),

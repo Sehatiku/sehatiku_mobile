@@ -41,9 +41,14 @@ String recordSummary(HealthRecord r) {
 }
 
 class HistoryScreen extends StatefulWidget {
-  const HistoryScreen({super.key, required this.onBack});
+  const HistoryScreen({
+    super.key,
+    required this.onBack,
+    this.onViewRecordWithDate,
+  });
 
   final VoidCallback onBack;
+  final void Function(DateTime)? onViewRecordWithDate;
 
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
@@ -52,6 +57,7 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   final _searchController = TextEditingController();
   String _query = '';
+  DateTime? _selectedFilterDate;
   
   bool _isLoading = true;
   String? _errorMessage;
@@ -133,14 +139,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }).toList();
 
     final all = _isFallback ? store.records : apiRecords;
-    final filtered = query.isEmpty
-        ? all
-        : all.where((r) {
-            final hay =
-                '${formatLongDate(r.date)} ${recordSummary(r)} ${r.note}'
-                    .toLowerCase();
-            return hay.contains(query);
-          }).toList();
+    var filtered = all;
+    if (_selectedFilterDate != null) {
+      filtered = filtered
+          .where((r) => HealthRecord.dayOf(r.date) == _selectedFilterDate)
+          .toList();
+    }
+    if (query.isNotEmpty) {
+      filtered = filtered.where((r) {
+        final hay =
+            '${formatLongDate(r.date)} ${recordSummary(r)} ${r.note}'
+                .toLowerCase();
+        return hay.contains(query);
+      }).toList();
+    }
 
     Widget content;
 
@@ -234,11 +246,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ),
                   ),
                 ),
-                if (_query.isNotEmpty)
+                if (_query.isNotEmpty || _selectedFilterDate != null)
                   GestureDetector(
                     onTap: () {
                       _searchController.clear();
-                      setState(() => _query = '');
+                      setState(() {
+                        _query = '';
+                        _selectedFilterDate = null;
+                      });
                     },
                     child: const Icon(
                       Icons.close_rounded,
@@ -247,14 +262,62 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ),
                   )
                 else
-                  const Icon(
-                    Icons.tune_rounded,
-                    color: AppColors.primary,
-                    size: 21,
+                  GestureDetector(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: _selectedFilterDate ?? DateTime.now(),
+                        firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                        lastDate: DateTime.now(),
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          _selectedFilterDate = HealthRecord.dayOf(picked);
+                        });
+                      }
+                    },
+                    child: const Icon(
+                      Icons.calendar_today_rounded,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
                   ),
               ],
             ),
           ),
+          if (_selectedFilterDate != null) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                FilterChip(
+                  label: Text(
+                    'Filter: ${formatLongDate(_selectedFilterDate!)}',
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                  onSelected: (_) {},
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                  side: const BorderSide(color: Colors.transparent),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  deleteIcon: const Icon(
+                    Icons.close_rounded,
+                    size: 14,
+                    color: AppColors.primary,
+                  ),
+                  onDeleted: () {
+                    setState(() {
+                      _selectedFilterDate = null;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 20),
           if (all.isEmpty)
             _HistoryEmpty(
@@ -273,6 +336,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
               HistoryNode(
                 record: filtered[i],
                 last: i == filtered.length - 1,
+                onTap: widget.onViewRecordWithDate != null
+                    ? () => widget.onViewRecordWithDate!(filtered[i].date)
+                    : null,
               ),
         ],
       );

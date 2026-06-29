@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:sehatiku_mobile/core/core.dart';
 import 'package:sehatiku_mobile/data/models/dashboard_models.dart';
 import 'package:sehatiku_mobile/data/models/health_record.dart';
+import 'package:sehatiku_mobile/data/models/today_status.dart';
 import 'package:sehatiku_mobile/data/repositories/health_store.dart';
 import 'package:sehatiku_mobile/data/services/dashboard_service.dart';
+import 'package:sehatiku_mobile/data/services/record_service.dart';
 import 'package:sehatiku_mobile/shared/widgets/widgets.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -12,10 +14,18 @@ import 'package:sehatiku_mobile/shared/widgets/widgets.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key, required this.onView, this.fullName});
+  const DashboardScreen({
+    super.key,
+    required this.onView,
+    this.onViewRecordWithDate,
+    this.fullName,
+  });
 
   final ValueChanged<MainView> onView;
+  final void Function(DateTime)? onViewRecordWithDate;
   final String? fullName;
+
+  static bool hasShownMissingLogsThisSession = false;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -25,6 +35,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   PatientDashboard? _dashboard;
   bool _loading = true;
   String? _error;
+  PatientTodayStatus? _todayStatus;
 
   @override
   void initState() {
@@ -46,11 +57,175 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       final data = await DashboardService.instance.fetchDashboard();
       if (mounted) setState(() => _dashboard = data);
+
+      // Silent fetch of today-status to check for missing logs since yesterday
+      try {
+        final status = await RecordService.instance.fetchTodayStatus();
+        if (mounted) {
+          setState(() {
+            _todayStatus = status;
+          });
+        }
+        if (mounted && !DashboardScreen.hasShownMissingLogsThisSession) {
+          DashboardScreen.hasShownMissingLogsThisSession = true;
+          final days = status.daysSinceLastLog;
+          if (days == null || days >= 2) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _showMissingLogsDialog(status);
+            });
+          }
+        }
+      } catch (statusError) {
+        debugPrint('Failed to fetch today-status: $statusError');
+      }
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _showMissingLogsDialog(PatientTodayStatus status) {
+    final colors = AppColors.of(context);
+    final DateTime targetDate;
+    String dateMsg = '';
+
+    if (status.daysSinceLastLog == null) {
+      targetDate = HealthRecord.dayOf(DateTime.now());
+      dateMsg = 'Anda belum pernah mengisi catatan harian Anda. Yuk, mulai isi sekarang!';
+    } else {
+      final lastLogDate = DateTime.tryParse(status.lastLoggedAt ?? '');
+      if (lastLogDate != null) {
+        final firstMissed = HealthRecord.dayOf(lastLogDate).add(const Duration(days: 1));
+        targetDate = firstMissed;
+        
+        final todayNormalized = HealthRecord.dayOf(DateTime.now());
+        final missedDaysCount = todayNormalized.difference(firstMissed).inDays;
+        if (missedDaysCount <= 1) {
+          dateMsg = 'Anda belum mengisi catatan harian untuk tanggal ${formatLongDate(firstMissed)}. Harap lengkapi catatan harian Anda.';
+        } else {
+          dateMsg = 'Anda belum mengisi catatan harian sejak tanggal ${formatLongDate(firstMissed)}. Harap lengkapi catatan harian Anda.';
+        }
+      } else {
+        targetDate = HealthRecord.dayOf(DateTime.now().subtract(const Duration(days: 1)));
+        dateMsg = 'Anda belum mengisi catatan harian untuk kemarin. Harap lengkapi catatan harian Anda.';
+      }
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: colors.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: AppColors.amber.withValues(alpha: .15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.warning_amber_rounded,
+                    color: AppColors.amber,
+                    size: 36,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Catatan Terlewat!',
+                  style: TextStyle(
+                    color: colors.text,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  dateMsg,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: colors.muted,
+                    fontSize: 13.5,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: colors.muted,
+                          side: BorderSide(color: colors.line),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text(
+                          'Nanti Saja',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                          gradient: const LinearGradient(
+                            colors: [AppColors.primary, AppColors.primary2],
+                          ),
+                        ),
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            if (widget.onViewRecordWithDate != null) {
+                              widget.onViewRecordWithDate!(targetDate);
+                            } else {
+                              widget.onView(MainView.catatan);
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            shadowColor: Colors.transparent,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          child: const Text(
+                            'Isi Sekarang',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -114,6 +289,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ],
               ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          if (_todayStatus != null && (_todayStatus!.daysSinceLastLog == null || _todayStatus!.daysSinceLastLog! >= 2)) ...[
+            _MissedLogsBanner(
+              status: _todayStatus!,
+              colors: colors,
+              onTap: () {
+                final DateTime targetDate;
+                if (_todayStatus!.daysSinceLastLog == null) {
+                  targetDate = HealthRecord.dayOf(DateTime.now());
+                } else {
+                  final lastLogDate = DateTime.tryParse(_todayStatus!.lastLoggedAt ?? '');
+                  if (lastLogDate != null) {
+                    targetDate = HealthRecord.dayOf(lastLogDate).add(const Duration(days: 1));
+                  } else {
+                    targetDate = HealthRecord.dayOf(DateTime.now().subtract(const Duration(days: 1)));
+                  }
+                }
+                if (widget.onViewRecordWithDate != null) {
+                  widget.onViewRecordWithDate!(targetDate);
+                } else {
+                  widget.onView(MainView.catatan);
+                }
+              },
             ),
             const SizedBox(height: 16),
           ],
@@ -206,13 +407,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
           const SizedBox(height: 28),
 
-          // ── Recommendations (from API) ───────────────────────────────────────
-          if (_dashboard != null && _dashboard!.recommendations.isNotEmpty) ...[
-            const SectionTitle(title: 'Rekomendasi Hari Ini'),
-            const SizedBox(height: 13),
-            _RecommendationsCard(recommendations: _dashboard!.recommendations),
-            const SizedBox(height: 24),
-          ],
+          // ── Motivasi Hari Ini ────────────────────────────────────────────────
+          const SectionTitle(title: 'Motivasi Hari Ini'),
+          const SizedBox(height: 13),
+          const _MotivationCard(),
+          const SizedBox(height: 24),
 
           // ── Education teaser ─────────────────────────────────────────────────
           _EducationTeaser(onView: widget.onView),
@@ -339,10 +538,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
-
-          // ── Motivational quote ───────────────────────────────────────────────
-          _MotivationalQuote(day: DateTime.now().dayOfYear),
         ],
       ),
     );
@@ -934,88 +1129,7 @@ class _EduCard extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// New: Motivational Quote with rotating content
-// ─────────────────────────────────────────────────────────────────────────────
 
-class _MotivationalQuote extends StatelessWidget {
-  const _MotivationalQuote({required this.day});
-
-  final int day;
-
-  static const _quotes = [
-    'Kesehatan adalah investasi terbaik untuk masa depan Anda.',
-    'Satu langkah kecil setiap hari akan membawa perubahan besar.',
-    'Tubuh yang sehat dimulai dari kebiasaan harian yang baik.',
-    'Konsisten minum obat adalah bukti sayang pada diri sendiri.',
-    'Setiap catatan kesehatan yang Anda buat membantu dokter merawat Anda lebih baik.',
-    'Istirahat cukup dan makan teratur adalah obat terbaik.',
-    'Jaga tekanan darah, jaga semangat. Anda luar biasa!',
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-    final quote = _quotes[day % _quotes.length];
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: colors.surface,
-        border: Border.all(color: AppColors.green.withValues(alpha: .22)),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: -4,
-            right: 0,
-            child: Icon(Icons.format_quote_rounded,
-                size: 36, color: AppColors.green.withValues(alpha: .35)),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  quote,
-                  style: TextStyle(
-                    color: colors.text,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    height: 1.55,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Container(
-                      width: 20,
-                      height: 3,
-                      decoration: BoxDecoration(
-                        color: AppColors.green,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Motivasi Hari Ini',
-                      style: TextStyle(
-                          color: AppColors.green,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // API-driven widgets
@@ -1237,6 +1351,7 @@ class _MeasurementGrid extends StatelessWidget {
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
+      padding: EdgeInsets.zero,
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: 13,
       crossAxisSpacing: 13,
@@ -1433,81 +1548,86 @@ class _DayDot extends StatelessWidget {
   }
 }
 
-/// Recommendations from the AI / SHAP factors.
-class _RecommendationsCard extends StatelessWidget {
-  const _RecommendationsCard({required this.recommendations});
+/// Motivasi sehat harian untuk pengguna.
+class _MotivationCard extends StatelessWidget {
+  const _MotivationCard();
 
-  final List<String> recommendations;
+  static const List<String> _motivations = [
+    'Kesehatan adalah kekayaan terbesar. Jaga dirimu hari ini untuk masa depan yang lebih baik.',
+    'Setiap langkah kecil yang kamu ambil hari ini adalah investasi untuk tubuh yang lebih sehat besok.',
+    'Kesehatan bukanlah tujuan akhir, melainkan perjalanan disiplin yang penuh cinta terhadap diri sendiri.',
+    'Tubuhmu adalah rumah bagimu. Rawatlah dengan baik agar ia nyaman untuk ditinggali.',
+    'Makan sehat dan bergerak aktif bukan bentuk hukuman, melainkan tanda penghargaan untuk tubuhmu.',
+    'Mulailah hari ini dengan senyuman dan komitmen untuk menjaga kesehatan tubuh serta pikiran.',
+    'Tidur yang cukup adalah kunci kesegaran pikiran. Berikan hak istirahat yang layak untuk tubuhmu.',
+    'Setiap tetes keringat dan kepatuhan minum obat adalah bukti perjuanganmu menuju kesembuhan.',
+    'Kesehatan yang baik dimulai dari pikiran yang damai. Jangan lupa luangkan waktu untuk relaksasi.',
+    'Jangan membandingkan progresmu dengan orang lain. Yang terpenting, kamu lebih sehat dari kemarin.',
+    'Disiplin hari ini adalah kedamaian pikiran esok hari. Tetap semangat memantau kesehatanmu!',
+    'Air putih, udara segar, dan pikiran positif adalah obat alami terbaik untuk tubuhmu.',
+    'Kesehatan tidak selalu datang dari obat-obatan. Seringkali ia datang dari kedamaian hati dan pikiran.',
+    'Tubuhmu mendengar apa pun yang dikatakan oleh pikiranmu. Tetaplah berpikir positif hari ini.',
+    'Jangan tunggu sakit baru menghargai kesehatan. Jaga pola hidup sehat mulai detik ini.',
+  ];
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final now = DateTime.now();
+    final dayCode = now.year * 1000 + now.month * 100 + now.day;
+    final quoteIndex = dayCode % _motivations.length;
+    final motivationText = _motivations[quoteIndex];
 
-    const iconList = [
-      Icons.restaurant_rounded,
-      Icons.directions_walk_rounded,
-      Icons.medication_rounded,
-      Icons.bedtime_rounded,
-    ];
-    const colorList = [
-      AppColors.green,
-      AppColors.cyan,
-      AppColors.violet,
-      AppColors.amber,
-    ];
+    final itemColor = AppColors.violet; // elegant violet for motivation
+    final itemIcon = Icons.wb_sunny_rounded; // sun icon for motivation/inspiration
 
-    return Column(
-      children: recommendations.asMap().entries.map((entry) {
-        final idx = entry.key;
-        final text = entry.value;
-        final itemColor = colorList[idx % colorList.length];
-        final itemIcon = iconList[idx % iconList.length];
-
-        return Padding(
-          padding: EdgeInsets.only(
-              bottom: idx < recommendations.length - 1 ? 10 : 0),
-          child: Container(
-            padding: const EdgeInsets.all(14),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border(
+          left: BorderSide(color: itemColor, width: 4),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: itemColor.withValues(alpha: .06),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
-              color: colors.surface,
-              borderRadius: BorderRadius.circular(18),
-              border: Border(
-                left: BorderSide(color: itemColor, width: 3.5),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: itemColor.withValues(alpha: .08),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              color: itemColor.withValues(alpha: .12),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Row(
+            child: Icon(itemIcon, color: itemColor, size: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: itemColor.withValues(alpha: .14),
-                    borderRadius: BorderRadius.circular(10),
+                Text(
+                  motivationText,
+                  style: TextStyle(
+                    color: colors.text,
+                    fontSize: 14,
+                    height: 1.5,
+                    fontWeight: FontWeight.w600,
                   ),
-                  child: Icon(itemIcon, color: itemColor, size: 18),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(text,
-                      style: TextStyle(
-                          color: colors.text,
-                          fontSize: 13.5,
-                          height: 1.45,
-                          fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
           ),
-        );
-      }).toList(),
+        ],
+      ),
     );
   }
 }
@@ -1692,6 +1812,7 @@ class _LocalSummaryGrid extends StatelessWidget {
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
+      padding: EdgeInsets.zero,
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: 13,
       crossAxisSpacing: 13,
@@ -1844,13 +1965,116 @@ class _TodayPromptCard extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Extension helpers
-// ─────────────────────────────────────────────────────────────────────────────
 
-extension on DateTime {
-  int get dayOfYear {
-    final start = DateTime(year, 1, 1);
-    return difference(start).inDays;
+
+class _MissedLogsBanner extends StatelessWidget {
+  const _MissedLogsBanner({
+    required this.status,
+    required this.colors,
+    required this.onTap,
+  });
+
+  final PatientTodayStatus status;
+  final AppColors colors;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    String dateMsg = '';
+    if (status.daysSinceLastLog == null) {
+      dateMsg = 'Anda belum pernah mengisi catatan harian.';
+    } else {
+      final lastLogDate = DateTime.tryParse(status.lastLoggedAt ?? '');
+      if (lastLogDate != null) {
+        final firstMissed = HealthRecord.dayOf(lastLogDate).add(const Duration(days: 1));
+        final todayNormalized = HealthRecord.dayOf(DateTime.now());
+        final missedDaysCount = todayNormalized.difference(firstMissed).inDays;
+        if (missedDaysCount <= 1) {
+          dateMsg = 'Belum mengisi catatan tanggal ${formatShortDate(firstMissed)}.';
+        } else {
+          dateMsg = 'Belum mengisi catatan sejak ${formatShortDate(firstMissed)}.';
+        }
+      } else {
+        dateMsg = 'Belum mengisi catatan untuk kemarin.';
+      }
+    }
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.red.withValues(alpha: .08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.red.withValues(alpha: .25),
+            width: 1.2,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.red.withValues(alpha: .15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.calendar_today_rounded,
+                color: AppColors.red,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Catatan Harian Terlewat',
+                    style: TextStyle(
+                      color: colors.text,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13.5,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    dateMsg,
+                    style: TextStyle(
+                      color: colors.muted,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Isi',
+                  style: TextStyle(
+                    color: AppColors.red,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12.5,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: AppColors.red,
+                  size: 11,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

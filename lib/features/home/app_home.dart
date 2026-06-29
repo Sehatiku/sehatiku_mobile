@@ -31,6 +31,8 @@ class AppHome extends StatelessWidget {
     required this.onDarkMode,
     required this.onAction,
     required this.onLogout,
+    this.recordDate,
+    this.onViewRecordWithDate,
   });
 
   /// The active session — null only in edge-cases before auth is resolved.
@@ -49,6 +51,8 @@ class AppHome extends StatelessWidget {
   final ValueChanged<bool> onDarkMode;
   final ValueChanged<String> onAction;
   final Future<void> Function() onLogout;
+  final DateTime? recordDate;
+  final void Function(DateTime)? onViewRecordWithDate;
 
   bool get _showNav => {
     MainView.beranda,
@@ -75,11 +79,13 @@ class AppHome extends StatelessWidget {
             child: switch (view) {
               MainView.beranda => DashboardScreen(
                 onView: onView,
+                onViewRecordWithDate: onViewRecordWithDate,
                 fullName: session?.fullName,
               ),
               MainView.catatan => RecordScreen(
                 onSaved: onAction,
                 onView: onView,
+                initialDate: recordDate,
               ),
               MainView.ai => AiScreen(
                 forecastIndex: forecastIndex,
@@ -106,6 +112,7 @@ class AppHome extends StatelessWidget {
               ),
               MainView.riwayat => HistoryScreen(
                 onBack: () => onView(MainView.beranda),
+                onViewRecordWithDate: onViewRecordWithDate,
               ),
               MainView.notifikasi => NotificationScreen(
                 onBack: () => onView(MainView.beranda),
