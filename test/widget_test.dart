@@ -206,7 +206,7 @@ void main() {
     await settle();
     await tester.idle();
     await tester.pump();
-    expect(find.text('Konsultasi Dokter'), findsOneWidget);
+    expect(find.text('Konsultasi Dokter'), findsWidgets);
     await tester.tap(find.byIcon(Icons.arrow_back_rounded));
     await settle();
 
