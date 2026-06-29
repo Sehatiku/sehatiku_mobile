@@ -5,9 +5,6 @@ import 'package:sehatiku_mobile/features/education/article_detail_screen.dart';
 import 'package:sehatiku_mobile/shared/widgets/widgets.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Dummy article data
-// ─────────────────────────────────────────────────────────────────────────────
-
 const _allArticles = [
   ArticleContent(
     icon: Icons.restaurant_rounded,
@@ -17,6 +14,7 @@ const _allArticles = [
     author: 'Tim Edukasi Sehatiku',
     publishedDate: 'Senin, 23 Juni 2025',
     color: AppColors.primary,
+    imageUrl: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=500&auto=format&fit=crop&q=80',
     intro:
         'Tekanan darah tinggi atau hipertensi adalah kondisi yang dapat dikendalikan '
         'melalui pola makan yang tepat. Beberapa makanan terbukti secara ilmiah mampu '
@@ -33,7 +31,7 @@ const _allArticles = [
       ArticleSection(
         heading: '2. Bayam',
         body:
-            'Bayam mengandung magnesium, kalium, dan nitrat alami. Nitrat diubah oleh '
+            'Bayam mengandung magnesium, kalium, and nitrat alami. Nitrat diubah oleh '
             'tubuh menjadi oksida nitrat yang melebarkan pembuluh darah, sehingga '
             'aliran darah menjadi lebih lancar dan tekanan darah berkurang.',
       ),
@@ -71,6 +69,7 @@ const _allArticles = [
     author: 'Tim Edukasi Sehatiku',
     publishedDate: 'Rabu, 18 Juni 2025',
     color: AppColors.green,
+    imageUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=500&auto=format&fit=crop&q=80',
     intro:
         'Olahraga adalah salah satu cara paling efektif untuk mengontrol gula darah. '
         'Aktivitas fisik membuat sel tubuh lebih sensitif terhadap insulin sehingga '
@@ -122,6 +121,7 @@ const _allArticles = [
     author: 'Tim Edukasi Sehatiku',
     publishedDate: 'Jumat, 13 Juni 2025',
     color: AppColors.violet,
+    imageUrl: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500&auto=format&fit=crop&q=80',
     intro:
         'Banyak pasien diabetes dan hipertensi yang menghentikan atau melewatkan '
         'obat saat merasa kondisinya sudah membaik. Kebiasaan ini justru berbahaya '
@@ -164,6 +164,7 @@ const _allArticles = [
     author: 'Tim Edukasi Sehatiku',
     publishedDate: 'Selasa, 10 Juni 2025',
     color: AppColors.orange,
+    imageUrl: 'https://images.unsplash.com/photo-1511295742364-92767eb89a95?w=500&auto=format&fit=crop&q=80',
     intro:
         'Kualitas tidur yang buruk secara langsung memengaruhi resistensi insulin '
         'dan kadar kortisol. Kurang tidur hanya 2 hari saja sudah cukup untuk '
@@ -216,6 +217,7 @@ const _allArticles = [
     author: 'Tim Edukasi Sehatiku',
     publishedDate: 'Kamis, 5 Juni 2025',
     color: AppColors.cyan,
+    imageUrl: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=500&auto=format&fit=crop&q=80',
     intro:
         'Kelebihan berat badan—terutama lemak visceral di area perut—adalah salah '
         'satu faktor risiko terbesar diabetes tipe 2 dan hipertensi. Penurunan '
@@ -258,6 +260,7 @@ const _allArticles = [
     author: 'Tim Edukasi Sehatiku',
     publishedDate: 'Senin, 2 Juni 2025',
     color: AppColors.amber,
+    imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop&q=80',
     intro:
         'Tidak semua karbohidrat dicerna pada kecepatan yang sama. Indeks Glikemik (IG) '
         'adalah skala 0–100 yang menunjukkan seberapa cepat suatu makanan menaikkan '
@@ -306,6 +309,7 @@ const _allArticles = [
     author: 'Tim Edukasi Sehatiku',
     publishedDate: 'Jumat, 30 Mei 2025',
     color: AppColors.pink,
+    imageUrl: 'https://images.unsplash.com/photo-1628348068343-c6a848d2b6dd?w=500&auto=format&fit=crop&q=80',
     intro:
         'Tekanan darah diukur dalam dua angka: sistolik (angka atas) dan diastolik '
         '(angka bawah) dalam satuan mmHg. Memahami artinya adalah langkah pertama '
@@ -430,84 +434,131 @@ class EducationScreen extends StatelessWidget {
           // ── Featured article banner ───────────────────────────────────────
           GestureDetector(
             onTap: () => _openArticle(context, _allArticles[0]),
-            child: GradientPanel(
-              radius: 24,
-              colors: const [AppColors.primary, AppColors.green],
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 11,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: .2),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.star_rounded, color: Colors.white, size: 15),
-                        SizedBox(width: 6),
-                        Text(
-                          'Pilihan Hari Ini',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Mengelola Gula Darah di Rumah dengan Tepat',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      height: 1.35,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: const Row(
-                      children: [
-                        Icon(
-                          Icons.schedule_rounded,
-                          color: Color(0xD9FFFFFF),
-                          size: 15,
-                        ),
-                        SizedBox(width: 5),
-                        Text(
-                          '5 menit baca',
-                          style: TextStyle(
-                            color: Color(0xD9FFFFFF),
-                            fontSize: 12.5,
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        Icon(
-                          Icons.arrow_forward_rounded,
-                          color: Color(0xD9FFFFFF),
-                          size: 15,
-                        ),
-                        SizedBox(width: 4),
-                        Text(
-                          'Baca sekarang',
-                          style: TextStyle(
-                            color: Color(0xD9FFFFFF),
-                            fontSize: 12.5,
-                          ),
-                        ),
-                      ],
-                    ),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x15000000),
+                    blurRadius: 15,
+                    offset: Offset(0, 8),
                   ),
                 ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: Stack(
+                  children: [
+                    // Background Image
+                    Positioned.fill(
+                      child: Image.network(
+                        _allArticles[0].imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    // Dark Gradient Overlay for text readability
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.15),
+                              Colors.black.withValues(alpha: 0.75),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Content
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 11,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: .22),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.star_rounded, color: Colors.amber, size: 15),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Pilihan Hari Ini',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _allArticles[0].title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              height: 1.35,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.schedule_rounded,
+                                  color: Color(0xD9FFFFFF),
+                                  size: 15,
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  _allArticles[0].readTime,
+                                  style: const TextStyle(
+                                    color: Color(0xD9FFFFFF),
+                                    fontSize: 12.5,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                const Icon(
+                                  Icons.arrow_forward_rounded,
+                                  color: Color(0xD9FFFFFF),
+                                  size: 15,
+                                ),
+                                const SizedBox(width: 4),
+                                const Text(
+                                  'Baca sekarang',
+                                  style: TextStyle(
+                                    color: Color(0xD9FFFFFF),
+                                    fontSize: 12.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -534,6 +585,7 @@ class EducationScreen extends StatelessWidget {
                 title: article.title,
                 time: article.readTime,
                 color: article.color,
+                imageUrl: article.imageUrl,
                 onTap: () => _openArticle(context, article),
               ),
         ],

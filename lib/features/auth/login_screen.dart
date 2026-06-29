@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:sehatiku_mobile/core/core.dart';
 import 'package:sehatiku_mobile/data/models/auth_models.dart';
@@ -30,6 +32,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
 
   AnimationController? _pulseController;
   AnimationController? _ecgController;
+  late final TapGestureRecognizer _faskesRecognizer;
 
   @override
   void initState() {
@@ -41,6 +44,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       setState(() => _passFocused = _passFocus.hasFocus);
     });
     _initControllers();
+    _faskesRecognizer = TapGestureRecognizer()..onTap = _contactFaskes;
   }
 
   void _initControllers() {
@@ -73,7 +77,23 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     _passFocus.dispose();
     _pulseController?.dispose();
     _ecgController?.dispose();
+    _faskesRecognizer.dispose();
     super.dispose();
+  }
+
+  Future<void> _contactFaskes() async {
+    final uri = Uri.parse('https://wa.me/628975228858');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tidak dapat membuka WhatsApp. Pastikan WhatsApp terinstal.'),
+          ),
+        );
+      }
+    }
   }
 
   void _submit() {
@@ -354,7 +374,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () {},
+                        onPressed: _contactFaskes,
                         style: TextButton.styleFrom(
                           padding: const EdgeInsets.symmetric(horizontal: 4),
                           minimumSize: const Size(0, 0),
@@ -503,10 +523,11 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                     ),
-                    children: const [
+                    children: [
                       TextSpan(
                         text: 'Hubungi Faskes Anda',
-                        style: TextStyle(
+                        recognizer: _faskesRecognizer,
+                        style: const TextStyle(
                           color: AppColors.primary,
                           fontWeight: FontWeight.w800,
                         ),

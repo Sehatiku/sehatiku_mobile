@@ -87,9 +87,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: .4),
-                  blurRadius: 36,
-                  offset: const Offset(0, 18),
+                  color: AppColors.primary.withValues(alpha: .28),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
                 ),
               ],
             ),
@@ -226,19 +226,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          // SOS Button
-          // _SosButton(
-          //   doctorName: _dashboard?.profile.assignedNakesName,
-          //   onAction: widget.onAction,
-          // ),
-          const SizedBox(height: 22),
           AppCard(
             padding: 18,
             child: Column(
               children: [
                 ProfileRow(
                   icon: Icons.language_rounded,
-                  iconColor: AppColors.violet,
+                  iconColor: AppColors.primary,
+                  iconBg: AppColors.tint(AppColors.primary),
                   label: 'Bahasa',
                   trailing: Text(
                     'Indonesia',
@@ -253,7 +248,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Divider(color: AppColors.of(context).line, height: 1),
                 ProfileRow(
                   icon: Icons.dark_mode_rounded,
-                  iconColor: AppColors.of(context).text,
+                  iconColor: AppColors.violet,
+                  iconBg: AppColors.tint(AppColors.violet),
                   label: 'Mode Gelap',
                   trailing: Switch(
                     value: widget.darkMode,

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:sehatiku_mobile/core/core.dart';
 import 'package:sehatiku_mobile/data/models/assigned_nakes_info.dart';
+import 'package:sehatiku_mobile/data/models/consultation.dart';
 import 'package:sehatiku_mobile/data/services/consultation_service.dart';
 import 'package:sehatiku_mobile/data/services/api_client.dart';
 import 'package:sehatiku_mobile/data/repositories/auth_store.dart';
@@ -27,74 +27,39 @@ class _DoctorScreenState extends State<DoctorScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   AssignedNakesInfo? _doctorInfo;
-
-  String? _activeOnset;
-  String? _activeSickness;
-  String? _activeDetail;
-  String? _activeStatus;
+  List<Consultation> _consultations = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchDoctor();
-    _loadActiveConsultation();
+    _fetchDoctorAndHistory();
   }
 
-  Future<void> _loadActiveConsultation() async {
-    final actorId = AuthStore.instance.session?.actorId;
-    if (actorId == null) return;
+  List<Consultation> get _activeConsultations {
+    return _consultations.where((c) => c.status == 'open').toList();
+  }
 
-    final prefs = await SharedPreferences.getInstance();
+  List<Consultation> get _historicalConsultations {
+    return _consultations.where((c) => c.status == 'replied').toList();
+  }
+
+  Future<void> _fetchDoctorAndHistory() async {
     if (mounted) {
       setState(() {
-        _activeOnset = prefs.getString('active_consultation_onset_$actorId');
-        _activeSickness = prefs.getString('active_consultation_sickness_$actorId');
-        _activeDetail = prefs.getString('active_consultation_detail_$actorId');
-        _activeStatus = prefs.getString('active_consultation_status_$actorId');
+        _isLoading = true;
+        _errorMessage = null;
       });
     }
-  }
-
-  Future<void> _saveActiveConsultation({
-    required String onset,
-    required String sickness,
-    required String detail,
-  }) async {
-    final actorId = AuthStore.instance.session?.actorId;
-    if (actorId == null) return;
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('active_consultation_onset_$actorId', onset);
-    await prefs.setString('active_consultation_sickness_$actorId', sickness);
-    await prefs.setString('active_consultation_detail_$actorId', detail);
-    await prefs.setString('active_consultation_status_$actorId', 'Waiting for Doctor Review');
-
-    await _loadActiveConsultation();
-  }
-
-  Future<void> _clearActiveConsultation() async {
-    final actorId = AuthStore.instance.session?.actorId;
-    if (actorId == null) return;
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('active_consultation_onset_$actorId');
-    await prefs.remove('active_consultation_sickness_$actorId');
-    await prefs.remove('active_consultation_detail_$actorId');
-    await prefs.remove('active_consultation_status_$actorId');
-
-    await _loadActiveConsultation();
-  }
-
-  Future<void> _fetchDoctor() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
     try {
-      final info = await ConsultationService.instance.fetchAssignedNakes();
+      final results = await Future.wait([
+        ConsultationService.instance.fetchAssignedNakes(),
+        ConsultationService.instance.fetchConsultationHistory(),
+      ]);
+      
       if (mounted) {
         setState(() {
-          _doctorInfo = info;
+          _doctorInfo = results[0] as AssignedNakesInfo;
+          _consultations = results[1] as List<Consultation>;
           _isLoading = false;
         });
       }
@@ -171,9 +136,30 @@ class _DoctorScreenState extends State<DoctorScreen> {
               if (!isNoDoctor) ...[
                 const SizedBox(height: 18),
                 FilledButton.icon(
-                  onPressed: _fetchDoctor,
+                  onPressed: _fetchDoctorAndHistory,
                   icon: const Icon(Icons.refresh_rounded, size: 18),
                   label: const Text('Coba Lagi'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ] else ...[
+                const SizedBox(height: 18),
+                FilledButton.icon(
+                  onPressed: () async {
+                    final uri = Uri.parse('https://wa.me/628975228858');
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    } else {
+                      widget.onAction('Tidak dapat membuka WhatsApp. Pastikan WhatsApp terinstal.');
+                    }
+                  },
+                  icon: const Icon(Icons.chat_bubble_rounded, size: 18),
+                  label: const Text('Hubungi Faskes Anda'),
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -191,6 +177,9 @@ class _DoctorScreenState extends State<DoctorScreen> {
       content = const SizedBox.shrink();
     } else {
       final doctor = _doctorInfo!;
+      final activeConsultations = _activeConsultations;
+      final historicalConsultations = _historicalConsultations;
+
       content = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -330,123 +319,170 @@ class _DoctorScreenState extends State<DoctorScreen> {
           ),
           const SizedBox(height: 18),
 
-          // Actions Row or Active Consultation Card
-          if (_activeStatus == 'Waiting for Doctor Review')
-            _buildActiveConsultationCard(context)
-          else
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    height: 54,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [AppColors.whatsapp, Color(0xFF2EBE59)],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.whatsapp.withValues(alpha: .24),
-                          blurRadius: 12,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
+          // Actions Row (Always Visible)
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 54,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [AppColors.whatsapp, Color(0xFF2EBE59)],
                     ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(18),
-                        onTap: () async {
-                          final waLink = doctor.waLink;
-                          final phone = doctor.whatsappPhone;
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.whatsapp.withValues(alpha: .24),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(18),
+                      onTap: () async {
+                        final waLink = doctor.waLink;
+                        final phone = doctor.whatsappPhone;
 
-                          final String? urlString;
-                          if (waLink != null && waLink.isNotEmpty) {
-                            urlString = waLink;
-                          } else if (phone.isNotEmpty) {
-                            urlString = 'https://wa.me/$phone';
-                          } else {
-                            urlString = null;
-                          }
+                        final String? urlString;
+                        if (waLink != null && waLink.isNotEmpty) {
+                          urlString = waLink;
+                        } else if (phone.isNotEmpty) {
+                          urlString = 'https://wa.me/$phone';
+                        } else {
+                          urlString = null;
+                        }
 
-                          if (urlString == null) {
-                            widget.onAction('Nomor WhatsApp dokter tidak tersedia.');
-                            return;
-                          }
+                        if (urlString == null) {
+                          widget.onAction('Nomor WhatsApp dokter tidak tersedia.');
+                          return;
+                        }
 
-                          final uri = Uri.parse(urlString);
-                          if (await canLaunchUrl(uri)) {
-                            await launchUrl(uri, mode: LaunchMode.externalApplication);
-                          } else {
-                            widget.onAction('Tidak dapat membuka WhatsApp. Pastikan WhatsApp terinstal.');
-                          }
-                        },
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 20),
-                            SizedBox(width: 8),
-                            Text(
-                              'WhatsApp',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                              ),
+                        final uri = Uri.parse(urlString);
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        } else {
+                          widget.onAction('Tidak dapat membuka WhatsApp. Pastikan WhatsApp terinstal.');
+                        }
+                      },
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'WhatsApp',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Container(
-                    height: 54,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [AppColors.primary, Color(0xFF2A8FE0)],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(alpha: .3),
-                          blurRadius: 12,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(
+                  height: 54,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [AppColors.primary, Color(0xFF2A8FE0)],
                     ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(18),
-                        onTap: () => _showConsultationForm(context),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.sick_outlined, color: Colors.white, size: 20),
-                            SizedBox(width: 8),
-                            Text(
-                              'Laporkan Keluhan',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                              ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: .3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(18),
+                      onTap: () => _showConsultationForm(context),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.sick_outlined, color: Colors.white, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'Laporkan Keluhan',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
-              ],
+              ),
+            ],
+          ),
+          if (activeConsultations.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            ...activeConsultations.map((c) => _buildActiveConsultationCard(context, c)),
+          ],
+          const SizedBox(height: 24),
+          Text(
+            'Riwayat Konsultasi',
+            style: TextStyle(
+              color: colors.text,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
             ),
+          ),
+          const SizedBox(height: 12),
+          if (historicalConsultations.isEmpty)
+            AppCard(
+              padding: 24,
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.chat_bubble_outline_rounded,
+                      color: colors.muted.withValues(alpha: 0.4),
+                      size: 40,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Belum Ada Riwayat Konsultasi',
+                      style: TextStyle(
+                        color: colors.text,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Keluhan yang Anda laporkan akan muncul di sini beserta balasan dokter.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: colors.muted,
+                        fontSize: 12.5,
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ...historicalConsultations.map((c) => _buildConsultationCard(context, c)),
         ],
       );
     }
@@ -458,67 +494,176 @@ class _DoctorScreenState extends State<DoctorScreen> {
     );
   }
 
-  Widget _buildActiveConsultationCard(BuildContext context) {
+  Widget _buildActiveConsultationCard(BuildContext context, Consultation openConsultation) {
     final c = AppColors.of(context);
-    return AppCard(
-      padding: 20,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Keluhan Aktif',
-                style: TextStyle(
-                  color: c.text,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 15.5,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.amber.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Text(
-                  'Waiting for Doctor Review',
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: AppCard(
+        padding: 20,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Keluhan Aktif',
                   style: TextStyle(
-                    color: AppColors.amber,
+                    color: c.text,
                     fontWeight: FontWeight.w800,
-                    fontSize: 11,
+                    fontSize: 15.5,
                   ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.amber.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text(
+                    'Waiting for Doctor Review',
+                    style: TextStyle(
+                      color: AppColors.amber,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Divider(color: c.line, height: 1),
+            const SizedBox(height: 16),
+            _buildDetailRow(context, 'Sakitnya Apa', openConsultation.complaintType),
+            const SizedBox(height: 12),
+            _buildDetailRow(context, 'Keluhan Sejak Kapan', openConsultation.complaintSince),
+            const SizedBox(height: 12),
+            _buildDetailRow(context, 'Detail Keluhan', openConsultation.complaintDetail),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConsultationCard(BuildContext context, Consultation c) {
+    final colors = AppColors.of(context);
+    final isReplied = c.status == 'replied';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: AppCard(
+        padding: 20,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    c.complaintType,
+                    style: TextStyle(
+                      color: colors.text,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isReplied
+                        ? AppColors.green.withValues(alpha: 0.12)
+                        : AppColors.amber.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    isReplied ? 'Sudah Dibalas' : 'Menunggu Balasan',
+                    style: TextStyle(
+                      color: isReplied ? AppColors.green : AppColors.amber,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 10,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              formatLongDate(c.createdAt),
+              style: TextStyle(
+                color: colors.muted,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Divider(color: colors.line, height: 1),
+            const SizedBox(height: 14),
+            _buildDetailRow(context, 'Keluhan Sejak Kapan', c.complaintSince),
+            const SizedBox(height: 10),
+            _buildDetailRow(context, 'Detail Keluhan', c.complaintDetail),
+            if (isReplied && c.nakesNote != null) ...[
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.tint(AppColors.primary).withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: colors.line),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.medical_services_rounded,
+                          color: AppColors.primary,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          _doctorInfo?.fullName.isNotEmpty == true
+                              ? 'Tanggapan ${_doctorInfo!.fullName}'
+                              : 'Tanggapan Dokter',
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      c.nakesNote!,
+                      style: TextStyle(
+                        color: colors.text,
+                        fontSize: 13,
+                        height: 1.45,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    if (c.repliedAt != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        formatLongDate(c.repliedAt!),
+                        style: TextStyle(
+                          color: colors.muted,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 16),
-          Divider(color: c.line, height: 1),
-          const SizedBox(height: 16),
-          _buildDetailRow(context, 'Sakitnya Apa', _activeSickness ?? ''),
-          const SizedBox(height: 12),
-          _buildDetailRow(context, 'Keluhan Sejak Kapan', _activeOnset ?? ''),
-          const SizedBox(height: 12),
-          _buildDetailRow(context, 'Detail Keluhan', _activeDetail ?? ''),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: OutlinedButton.icon(
-              onPressed: _clearActiveConsultation,
-              icon: const Icon(Icons.cancel_outlined, size: 18),
-              label: const Text('Batalkan Keluhan'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.red,
-                side: const BorderSide(color: AppColors.red),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -763,12 +908,24 @@ class _DoctorScreenState extends State<DoctorScreen> {
                                     });
                                     return;
                                   }
-    
-                                  final complaintPayload = 'Sakit: $sickness\nSejak: $onset\nDetail: $detail';
                                   
-                                  if (complaintPayload.length > 2000) {
+                                  if (onset.length > 500) {
                                     setStateModal(() {
-                                      modalError = 'Keluhan tidak boleh melebihi 2000 karakter.';
+                                      modalError = 'Onset tidak boleh melebihi 500 karakter.';
+                                    });
+                                    return;
+                                  }
+                                  
+                                  if (sickness.length > 500) {
+                                    setStateModal(() {
+                                      modalError = 'Sakit tidak boleh melebihi 500 karakter.';
+                                    });
+                                    return;
+                                  }
+                                  
+                                  if (detail.length > 2000) {
+                                    setStateModal(() {
+                                      modalError = 'Detail keluhan tidak boleh melebihi 2000 karakter.';
                                     });
                                     return;
                                   }
@@ -779,12 +936,12 @@ class _DoctorScreenState extends State<DoctorScreen> {
                                   });
     
                                   try {
-                                    await ConsultationService.instance.sendConsultation(complaintPayload);
-                                    await _saveActiveConsultation(
-                                      onset: onset,
-                                      sickness: sickness,
-                                      detail: detail,
+                                    await ConsultationService.instance.sendConsultation(
+                                      complaintSince: onset,
+                                      complaintType: sickness,
+                                      complaintDetail: detail,
                                     );
+                                    await _fetchDoctorAndHistory();
                                     if (context.mounted) {
                                       Navigator.pop(context);
                                       widget.onAction('Keluhan berhasil dikirimkan.');
@@ -794,11 +951,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
                                       setStateModal(() {
                                         isSending = false;
                                         if (e is ApiException) {
-                                          if (e.statusCode == 422) {
-                                            modalError = e.message;
-                                          } else {
-                                            modalError = 'Gagal mengirim keluhan. Periksa koneksi internet Anda.';
-                                          }
+                                          modalError = e.message;
                                         } else {
                                           modalError = 'Gagal mengirim keluhan. Periksa koneksi internet Anda.';
                                         }

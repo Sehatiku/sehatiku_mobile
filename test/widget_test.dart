@@ -99,6 +99,49 @@ void main() {
               'message': 'Keluhan berhasil dikirim',
             },
           ));
+        } else if (options.path.contains('/api/v1/patients/notifications/unread-count')) {
+          handler.resolve(Response(
+            requestOptions: options,
+            statusCode: 200,
+            data: {
+              'message': 'jumlah notifikasi belum dibaca',
+              'data': {'unread_count': 1}
+            },
+          ));
+        } else if (options.path.contains('/read') || options.path.contains('/read-all')) {
+          handler.resolve(Response(
+            requestOptions: options,
+            statusCode: 200,
+            data: {
+              'message': 'success',
+              'data': null
+            },
+          ));
+        } else if (options.path.contains('/api/v1/patients/notifications')) {
+          handler.resolve(Response(
+            requestOptions: options,
+            statusCode: 200,
+            data: {
+              'data': [
+                {
+                  'id': '1',
+                  'title': 'Pengingat Obat',
+                  'desc': 'Saatnya minum Metformin pukul 09.00.',
+                  'type': 'medicine',
+                  'created_at': '2026-06-29T09:00:00.000Z',
+                  'is_read': false
+                },
+                {
+                  'id': '2',
+                  'title': 'Peringatan AI',
+                  'desc': 'Tekanan darah cenderung naik. Kurangi garam hari ini.',
+                  'type': 'ai',
+                  'created_at': '2026-06-29T08:00:00.000Z',
+                  'is_read': true
+                }
+              ]
+            },
+          ));
         } else {
           handler.next(options);
         }

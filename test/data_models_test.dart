@@ -1,8 +1,85 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sehatiku_mobile/data/models/assigned_nakes_info.dart';
 import 'package:sehatiku_mobile/data/models/history_entry.dart';
+import 'package:sehatiku_mobile/data/models/notification_model.dart';
 
 void main() {
+  group('NotificationModel Tests', () {
+    test('fromJson parses user notification format successfully', () {
+      final json = {
+        "id": "8751f824-7a64-4f02-85aa-b685b1c29d2d",
+        "message_type": "consultation_reply",
+        "nakes_name": "ironmen",
+        "nakes_note": "ywd",
+        "consultation_id": "4d538d02-6653-480a-96e8-cfc8635d9d1d",
+        "created_at": "2026-06-29T08:18:56.72442Z"
+      };
+
+      final notif = NotificationModel.fromJson(json);
+
+      expect(notif.id, equals('8751f824-7a64-4f02-85aa-b685b1c29d2d'));
+      expect(notif.type, equals('consultation_reply'));
+      expect(notif.title, equals('Balasan dari ironmen'));
+      expect(notif.message, equals('ywd'));
+      expect(notif.nakesName, equals('ironmen'));
+      expect(notif.nakesNote, equals('ywd'));
+      expect(notif.consultationId, equals('4d538d02-6653-480a-96e8-cfc8635d9d1d'));
+      expect(notif.createdAt, equals(DateTime.parse('2026-06-29T08:18:56.72442Z')));
+    });
+
+    test('fromJson parses is_read field successfully', () {
+      final json1 = {
+        "id": "1",
+        "message_type": "general",
+        "message": "hello",
+        "created_at": "2026-06-29T08:18:56Z",
+        "is_read": true
+      };
+      final notif1 = NotificationModel.fromJson(json1);
+      expect(notif1.isRead, isTrue);
+
+      final json2 = {
+        "id": "2",
+        "message_type": "general",
+        "message": "hello",
+        "created_at": "2026-06-29T08:18:56Z",
+        "is_read": false
+      };
+      final notif2 = NotificationModel.fromJson(json2);
+      expect(notif2.isRead, isFalse);
+
+      final json3 = {
+        "id": "3",
+        "message_type": "general",
+        "message": "hello",
+        "created_at": "2026-06-29T08:18:56Z"
+      };
+      final notif3 = NotificationModel.fromJson(json3);
+      expect(notif3.isRead, isFalse);
+    });
+
+    test('fromJson parses notification with empty nakes_name successfully', () {
+      final json = {
+        "id": "3bbfedd0-cd2d-449e-b719-f77d2e5b32ba",
+        "message_type": "consultation_reply",
+        "nakes_name": "",
+        "nakes_note": "aaaaa",
+        "consultation_id": "6fcb8767-dd52-4646-a9e0-9a0853aaf9a4",
+        "created_at": "2026-06-29T07:44:55.365091Z"
+      };
+
+      final notif = NotificationModel.fromJson(json);
+
+      expect(notif.id, equals('3bbfedd0-cd2d-449e-b719-f77d2e5b32ba'));
+      expect(notif.type, equals('consultation_reply'));
+      expect(notif.title, equals('Balasan Konsultasi'));
+      expect(notif.message, equals('aaaaa'));
+      expect(notif.nakesName, isEmpty);
+      expect(notif.nakesNote, equals('aaaaa'));
+      expect(notif.consultationId, equals('6fcb8767-dd52-4646-a9e0-9a0853aaf9a4'));
+    });
+  });
+
   group('AssignedNakesInfo Model Tests', () {
     test('fromJson parses valid JSON with all fields successfully', () {
       final json = {
