@@ -7,6 +7,7 @@ import 'package:sehatiku_mobile/data/models/today_status.dart';
 import 'package:sehatiku_mobile/data/repositories/health_store.dart';
 import 'package:sehatiku_mobile/data/services/dashboard_service.dart';
 import 'package:sehatiku_mobile/data/services/record_service.dart';
+import 'package:sehatiku_mobile/data/services/notification_service.dart';
 import 'package:sehatiku_mobile/shared/widgets/widgets.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -36,6 +37,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _loading = true;
   String? _error;
   PatientTodayStatus? _todayStatus;
+  int _unreadCount = 0;
 
   @override
   void initState() {
@@ -57,6 +59,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       final data = await DashboardService.instance.fetchDashboard();
       if (mounted) setState(() => _dashboard = data);
+
+      // Fetch unread notification count
+      try {
+        final count = await NotificationService.instance.fetchUnreadCount();
+        if (mounted) {
+          setState(() {
+            _unreadCount = count;
+          });
+        }
+      } catch (unreadError) {
+        debugPrint('Failed to fetch unread notifications count: $unreadError');
+      }
 
       // Silent fetch of today-status to check for missing logs since yesterday
       try {
@@ -254,6 +268,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             firstName: firstName,
             date: now,
             colors: colors,
+            unreadCount: _unreadCount,
             onNotification: () => widget.onView(MainView.notifikasi),
           ),
           const SizedBox(height: 22),
@@ -669,12 +684,14 @@ class _Header extends StatelessWidget {
     required this.firstName,
     required this.date,
     required this.colors,
+    required this.unreadCount,
     required this.onNotification,
   });
 
   final String firstName;
   final DateTime date;
   final AppColors colors;
+  final int unreadCount;
   final VoidCallback onNotification;
 
   @override
@@ -716,19 +733,20 @@ class _Header extends StatelessWidget {
               icon: Icons.notifications_rounded,
               onTap: onNotification,
             ),
-            Positioned(
-              top: 10,
-              right: 11,
-              child: Container(
-                width: 9,
-                height: 9,
-                decoration: BoxDecoration(
-                  color: AppColors.red,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: colors.background, width: 2),
+            if (unreadCount > 0)
+              Positioned(
+                top: 10,
+                right: 11,
+                child: Container(
+                  width: 9,
+                  height: 9,
+                  decoration: BoxDecoration(
+                    color: AppColors.red,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: colors.background, width: 2),
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ],
@@ -989,24 +1007,28 @@ class _EducationTeaser extends StatelessWidget {
       color: AppColors.green,
       category: 'Nutrisi',
       title: 'Pola Makan Sehat untuk Penderita Diabetes',
+      imageUrl: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=500&auto=format&fit=crop&q=80',
     ),
     _EduTopic(
       icon: Icons.favorite_rounded,
       color: AppColors.pink,
       category: 'Tekanan Darah',
       title: 'Cara Cek & Kontrol Tekanan Darah di Rumah',
+      imageUrl: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=500&auto=format&fit=crop&q=80',
     ),
     _EduTopic(
       icon: Icons.medication_rounded,
       color: AppColors.violet,
       category: 'Obat-obatan',
       title: 'Pentingnya Minum Obat Setiap Hari',
+      imageUrl: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500&auto=format&fit=crop&q=80',
     ),
     _EduTopic(
       icon: Icons.directions_run_rounded,
       color: AppColors.amber,
       category: 'Aktivitas',
       title: 'Olahraga Ringan yang Aman untuk Lansia',
+      imageUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=500&auto=format&fit=crop&q=80',
     ),
   ];
 
@@ -1057,12 +1079,14 @@ class _EduTopic {
     required this.color,
     required this.category,
     required this.title,
+    required this.imageUrl,
   });
 
   final IconData icon;
   final Color color;
   final String category;
   final String title;
+  final String imageUrl;
 }
 
 class _EduCard extends StatelessWidget {
@@ -1078,7 +1102,6 @@ class _EduCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: 164,
-        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: colors.surface,
           borderRadius: BorderRadius.circular(20),
@@ -1094,33 +1117,51 @@ class _EduCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: topic.color.withValues(alpha: .14),
-                borderRadius: BorderRadius.circular(12),
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(19)),
+              child: Image.network(
+                topic.imageUrl,
+                height: 82,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  height: 82,
+                  color: topic.color.withValues(alpha: .12),
+                  child: Center(
+                    child: Icon(topic.icon, color: topic.color, size: 24),
+                  ),
+                ),
               ),
-              child: Icon(topic.icon, color: topic.color, size: 22),
             ),
-            const SizedBox(height: 10),
-            Text(
-              topic.category,
-              style: TextStyle(
-                  color: topic.color,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 10.5),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              topic.title,
-              style: TextStyle(
-                  color: colors.text,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12.5,
-                  height: 1.35),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      topic.category,
+                      style: TextStyle(
+                          color: topic.color,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 10),
+                    ),
+                    const SizedBox(height: 4),
+                    Expanded(
+                      child: Text(
+                        topic.title,
+                        style: TextStyle(
+                            color: colors.text,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 11.5,
+                            height: 1.3),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),

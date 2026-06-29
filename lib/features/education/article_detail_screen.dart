@@ -25,6 +25,7 @@ class ArticleContent {
     required this.intro,
     required this.sections,
     required this.closingNote,
+    required this.imageUrl,
   });
 
   final IconData icon;
@@ -37,6 +38,7 @@ class ArticleContent {
   final String intro;
   final List<ArticleSection> sections;
   final String closingNote;
+  final String imageUrl;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -66,77 +68,89 @@ class ArticleDetailScreen extends StatelessWidget {
               child: _CircleBackButton(color: article.color),
             ),
             flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      article.color,
-                      Color.lerp(article.color, Colors.black, 0.3)!,
-                    ],
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.network(
+                    article.imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: article.color,
+                    ),
                   ),
-                ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(72, 12, 20, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        _CategoryChip(
-                          label: article.category,
-                          color: article.color,
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          article.title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            height: 1.3,
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.2),
+                          Colors.black.withValues(alpha: 0.85),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(72, 12, 20, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          _CategoryChip(
+                            label: article.category,
+                            color: article.color,
                           ),
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.schedule_rounded,
-                              color: Color(0xD9FFFFFF),
-                              size: 14,
+                          const SizedBox(height: 10),
+                          Text(
+                            article.title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              height: 1.3,
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              article.readTime,
-                              style: const TextStyle(
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.schedule_rounded,
                                 color: Color(0xD9FFFFFF),
-                                fontSize: 12,
+                                size: 14,
                               ),
-                            ),
-                            const SizedBox(width: 14),
-                            const Icon(
-                              Icons.person_rounded,
-                              color: Color(0xD9FFFFFF),
-                              size: 14,
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                article.author,
-                                overflow: TextOverflow.ellipsis,
+                              const SizedBox(width: 4),
+                              Text(
+                                article.readTime,
                                 style: const TextStyle(
                                   color: Color(0xD9FFFFFF),
                                   fontSize: 12,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                              const SizedBox(width: 14),
+                              const Icon(
+                                Icons.person_rounded,
+                                color: Color(0xD9FFFFFF),
+                                size: 14,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  article.author,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Color(0xD9FFFFFF),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
             ),
           ),

@@ -191,6 +191,7 @@ class ArticleTile extends StatelessWidget {
     required this.title,
     required this.time,
     required this.color,
+    required this.imageUrl,
     this.onTap,
   });
 
@@ -199,6 +200,7 @@ class ArticleTile extends StatelessWidget {
   final String title;
   final String time;
   final Color color;
+  final String imageUrl;
   final VoidCallback? onTap;
 
   @override
@@ -213,14 +215,35 @@ class ArticleTile extends StatelessWidget {
           padding: 15,
           child: Row(
             children: [
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: .12),
-                  borderRadius: BorderRadius.circular(16),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.network(
+                  imageUrl,
+                  width: 54,
+                  height: 54,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 54,
+                    height: 54,
+                    color: color.withValues(alpha: .12),
+                    child: Icon(icon, color: color, size: 27),
+                  ),
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      width: 54,
+                      height: 54,
+                      color: color.withValues(alpha: .05),
+                      child: const Center(
+                        child: SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    );
+                  },
                 ),
-                child: Icon(icon, color: color, size: 27),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -267,6 +290,7 @@ class ProfileRow extends StatelessWidget {
     required this.icon,
     required this.label,
     this.iconColor = AppColors.primary,
+    this.iconBg,
     this.trailing,
     this.onTap,
   });
@@ -274,6 +298,7 @@ class ProfileRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color iconColor;
+  final Color? iconBg;
   final Widget? trailing;
   final VoidCallback? onTap;
 
@@ -287,7 +312,18 @@ class ProfileRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 13),
         child: Row(
           children: [
-            Icon(icon, color: iconColor),
+            if (iconBg != null)
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: iconBg,
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Icon(icon, color: iconColor, size: 20),
+              )
+            else
+              Icon(icon, color: iconColor),
             const SizedBox(width: 13),
             Expanded(
               child: Text(
@@ -391,9 +427,21 @@ class RecommendBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 12),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .14),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: .28)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w700,
+          fontSize: 11.5,
+        ),
+      ),
     );
   }
 }
@@ -407,6 +455,8 @@ class NotifCard extends StatelessWidget {
     required this.title,
     required this.desc,
     required this.time,
+    required this.isRead,
+    this.onTap,
   });
 
   final IconData icon;
@@ -415,95 +465,112 @@ class NotifCard extends StatelessWidget {
   final String title;
   final String desc;
   final String time;
+  final bool isRead;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        decoration: BoxDecoration(
-          color: c.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: c.line),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x18000000),
-              blurRadius: 20,
-              offset: Offset(0, 8),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: Stack(
-            children: [
-              Positioned(
-                left: 0,
-                top: 0,
-                bottom: 0,
-                child: Container(
-                  width: 4,
-                  color: color,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(21, 17, 17, 17),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: AppColors.tint(color),
-                        borderRadius: BorderRadius.circular(13),
-                      ),
-                      child: Icon(icon, color: color, size: 22),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  title,
-                                  style: TextStyle(
-                                    color: c.text,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 14.5,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                time,
-                                style: TextStyle(
-                                  color: c.muted,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            desc,
-                            style: TextStyle(
-                              color: c.muted,
-                              fontSize: 13,
-                              height: 1.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          decoration: BoxDecoration(
+            color: c.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: c.line),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x18000000),
+                blurRadius: 20,
+                offset: Offset(0, 8),
               ),
             ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Stack(
+              children: [
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 4,
+                    color: color,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(21, 17, 17, 17),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: AppColors.tint(color),
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        child: Icon(icon, color: color, size: 22),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    title,
+                                    style: TextStyle(
+                                      color: c.text,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 14.5,
+                                    ),
+                                  ),
+                                ),
+                                if (!isRead) ...[
+                                  Container(
+                                    width: 7,
+                                    height: 7,
+                                    decoration: const BoxDecoration(
+                                      color: AppColors.primary,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                ],
+                                Text(
+                                  time,
+                                  style: TextStyle(
+                                    color: c.muted,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              desc,
+                              style: TextStyle(
+                                color: c.muted,
+                                fontSize: 13,
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -222,7 +222,7 @@ class AiScreen extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [AppColors.violet, Color(0xFF6F78F0), AppColors.green],
+              colors: [AppColors.violet, AppColors.primary],
             ),
           ),
           child: Column(
