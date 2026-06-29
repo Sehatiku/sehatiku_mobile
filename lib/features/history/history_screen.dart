@@ -138,7 +138,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
       );
     }).toList();
 
-    final all = _isFallback ? store.records : apiRecords;
+    // Show server entries, plus any local records the server doesn't have yet
+    // (e.g. a record just saved that hasn't propagated, or a pending offline
+    // sync), so a freshly-saved record appears in Riwayat immediately.
+    final List<HealthRecord> all;
+    if (_isFallback) {
+      all = store.records;
+    } else {
+      final apiDates = apiRecords.map((r) => r.date).toSet();
+      final localOnly =
+          store.records.where((r) => !apiDates.contains(r.date)).toList();
+      all = [...apiRecords, ...localOnly]
+        ..sort((a, b) => b.date.compareTo(a.date));
+    }
     var filtered = all;
     if (_selectedFilterDate != null) {
       filtered = filtered

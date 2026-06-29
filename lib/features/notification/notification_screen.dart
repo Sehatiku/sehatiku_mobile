@@ -6,9 +6,14 @@ import 'package:sehatiku_mobile/data/services/notification_service.dart';
 import 'package:sehatiku_mobile/shared/widgets/widgets.dart';
 
 class NotificationScreen extends StatefulWidget {
-  const NotificationScreen({super.key, required this.onBack});
+  const NotificationScreen({
+    super.key,
+    required this.onBack,
+    this.onNavigate,
+  });
 
   final VoidCallback onBack;
+  final ValueChanged<MainView>? onNavigate;
 
   @override
   State<NotificationScreen> createState() => _NotificationScreenState();
@@ -313,7 +318,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
               desc: n.message,
               time: _formatRelativeTime(n.createdAt),
               isRead: n.isRead,
-              onTap: () => _markAsRead(n.id),
+              onTap: () async {
+                await _markAsRead(n.id);
+                if (n.type == 'consultation_reply' && widget.onNavigate != null) {
+                  widget.onNavigate!(MainView.dokter);
+                }
+              },
             );
           }),
         ],

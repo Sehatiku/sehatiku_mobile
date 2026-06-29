@@ -116,6 +116,7 @@ class AppHome extends StatelessWidget {
               ),
               MainView.notifikasi => NotificationScreen(
                 onBack: () => onView(MainView.beranda),
+                onNavigate: onView,
               ),
               MainView.edukasi => EducationScreen(
                 onBack: () => onView(MainView.beranda),

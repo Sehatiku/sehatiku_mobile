@@ -6,6 +6,7 @@ import 'package:sehatiku_mobile/core/core.dart';
 
 import 'package:sehatiku_mobile/data/models/health_record.dart';
 import 'package:sehatiku_mobile/data/repositories/health_store.dart';
+import 'package:sehatiku_mobile/data/services/record_service.dart';
 import 'package:sehatiku_mobile/shared/widgets/widgets.dart';
 
 class _ProgressMetric {
@@ -107,7 +108,7 @@ _ProgressMetric _metricFor(int index, List<HealthRecord> recs) {
   }
 }
 
-class ProgressScreen extends StatelessWidget {
+class ProgressScreen extends StatefulWidget {
   const ProgressScreen({
     super.key,
     required this.progressIndex,
@@ -122,11 +123,47 @@ class ProgressScreen extends StatelessWidget {
   final ValueChanged<int> onRange;
 
   @override
+  State<ProgressScreen> createState() => _ProgressScreenState();
+}
+
+class _ProgressScreenState extends State<ProgressScreen> {
+  bool _syncing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncHistory();
+  }
+
+  @override
+  void didUpdateWidget(ProgressScreen old) {
+    super.didUpdateWidget(old);
+    if (old.rangeIndex != widget.rangeIndex) {
+      _syncHistory();
+    }
+  }
+
+  Future<void> _syncHistory() async {
+    // API max is 90; map rangeIndex → limit (week=7, month=30, year=90).
+    final limit = const [7, 30, 90][widget.rangeIndex];
+    if (!mounted) return;
+    setState(() => _syncing = true);
+    try {
+      final entries = await RecordService.instance.fetchHistory(limit: limit);
+      if (mounted) await HealthScope.of(context).mergeHistory(entries);
+    } catch (_) {
+      // Show whatever local data is available if the fetch fails.
+    } finally {
+      if (mounted) setState(() => _syncing = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final store = HealthScope.of(context);
-    final count = const [7, 30, 365][rangeIndex];
+    final count = const [7, 30, 365][widget.rangeIndex];
     final recs = store.recent(count);
-    final metric = _metricFor(progressIndex, recs);
+    final metric = _metricFor(widget.progressIndex, recs);
     final color = metric.color;
     final values = metric.values;
     final hasChart = values.length >= 2;
@@ -155,8 +192,8 @@ class ProgressScreen extends StatelessWidget {
                         'Berat Badan',
                         'Kepatuhan Obat',
                       ][i],
-                      selected: progressIndex == i,
-                      onTap: () => onProgress(i),
+                      selected: widget.progressIndex == i,
+                      onTap: () => widget.onProgress(i),
                     ),
                   ),
               ],
@@ -197,17 +234,24 @@ class ProgressScreen extends StatelessWidget {
                     ),
                     SegmentedMini(
                       labels: const ['Minggu', 'Bulan', 'Tahun'],
-                      selected: rangeIndex,
-                      onTap: onRange,
+                      selected: widget.rangeIndex,
+                      onTap: widget.onRange,
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
                   height: 170,
-                  child: hasChart
-                      ? TrendChart(color: color, values: values)
-                      : const ChartEmpty(),
+                  child: _syncing && !hasChart
+                      ? Center(
+                          child: CircularProgressIndicator(
+                            color: color,
+                            strokeWidth: 2.5,
+                          ),
+                        )
+                      : hasChart
+                          ? TrendChart(color: color, values: values)
+                          : const ChartEmpty(),
                 ),
                 const SizedBox(height: 8),
                 if (hasChart)

@@ -78,6 +78,9 @@ class _SehatikuShellState extends State<SehatikuShell> {
         SnackBar(
           content: Text(message),
           behavior: SnackBarBehavior.floating,
+          // Margin pushes the snackbar above the floating nav bar
+          // (nav is 86px tall at bottom: 18 → total 104px from bottom).
+          margin: const EdgeInsets.fromLTRB(12, 5, 12, 112),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'package:sehatiku_mobile/core/core.dart';
 import 'package:sehatiku_mobile/data/models/health_record.dart';
+import 'package:sehatiku_mobile/data/models/health_score.dart';
 import 'package:sehatiku_mobile/data/repositories/health_store.dart';
 import 'package:sehatiku_mobile/data/services/api_client.dart';
 import 'package:sehatiku_mobile/data/services/record_service.dart';
@@ -36,11 +37,11 @@ class _RecordScreenState extends State<RecordScreen> {
   final _medicineTimeController = TextEditingController();
   final _customActivityController = TextEditingController();
   final _activityMinutesController = TextEditingController();
+  final _mealsController = TextEditingController();
   String _selectedActivityType = 'Jalan Kaki';
 
   bool _medicineTaken = false;
   bool _saving = false;
-  final Set<String> _meals = {};
   bool _active30 = false;
   int _sleepQuality = 1; // 0=Buruk, 1=Cukup, 2=Nyenyak
   int _stressIndex = 1; // 0=Santai, 1=Normal, 2=Tinggi
@@ -84,7 +85,7 @@ class _RecordScreenState extends State<RecordScreen> {
         _customActivityController.clear();
         _activityMinutesController.clear();
         _medicineTaken = false;
-        _meals.clear();
+        _mealsController.clear();
         _active30 = false;
         _sleepQuality = 1;
         _stressIndex = 1;
@@ -126,9 +127,7 @@ class _RecordScreenState extends State<RecordScreen> {
         _medicineNameController.text = record.medicineName;
         _medicineTimeController.text = record.medicineTime;
       }
-      _meals
-        ..clear()
-        ..addAll(record.meals);
+      _mealsController.text = record.meals.isEmpty ? '' : record.meals.join(', ');
       _active30 = record.active30;
       _activityMinutesController.text = record.activityMinutes > 0 ? record.activityMinutes.toString() : (record.active30 ? '30' : '');
       _selectedActivityType = record.activityType.isEmpty ? 'Jalan Kaki' : record.activityType;
@@ -161,6 +160,7 @@ class _RecordScreenState extends State<RecordScreen> {
     _medicineTimeController.dispose();
     _customActivityController.dispose();
     _activityMinutesController.dispose();
+    _mealsController.dispose();
     super.dispose();
   }
 
@@ -186,15 +186,24 @@ class _RecordScreenState extends State<RecordScreen> {
     final w = _parseDouble(_weightController);
     final sleep = _parseDouble(_sleepController);
 
-    if (bs == null &&
-        sys == null &&
-        dia == null &&
-        w == null &&
-        !_medicineTaken &&
-        sleep == null &&
-        _meals.isEmpty &&
-        _noteController.text.trim().isEmpty) {
-      widget.onSaved('Silakan masukkan minimal satu data kesehatan.');
+    // Metrics the backend accepts on POST /records — at least one is required
+    // for the record (and the health score) to be saved server-side.
+    // A note is NOT a metric: it is never sent to the server.
+    final hasRecordMetric = bs != null ||
+        (sys != null && dia != null) ||
+        w != null ||
+        _medicineTaken ||
+        _mealsController.text.trim().isNotEmpty;
+
+    // Lifestyle inputs go to /health-logs, not /records.
+    final hasLifestyle = sleep != null || _active30 || _smoke || _alcohol;
+
+    if (!hasRecordMetric && !hasLifestyle) {
+      widget.onSaved(
+        _noteController.text.trim().isNotEmpty
+            ? 'Catatan tambahan saja belum cukup. Isi minimal satu data kesehatan (mis. gula darah, tekanan darah, atau berat badan).'
+            : 'Silakan masukkan minimal satu data kesehatan.',
+      );
       return;
     }
 
@@ -220,7 +229,7 @@ class _RecordScreenState extends State<RecordScreen> {
       medicineTaken: _medicineTaken,
       medicineName: _medicineTaken ? (_medicineNameController.text.trim().isEmpty ? 'Metformin' : _medicineNameController.text.trim()) : '',
       medicineTime: _medicineTaken ? (_medicineTimeController.text.trim().isEmpty ? '09:00' : _medicineTimeController.text.trim()) : '',
-      meals: {..._meals},
+      meals: _mealsController.text.trim().isEmpty ? {} : {_mealsController.text.trim()},
       active30: _active30 && activityMin >= 30,
       activityType: _active30 ? (activityTypeVal.isEmpty ? 'Jalan Kaki' : activityTypeVal) : '',
       activityMinutes: _active30 ? (activityMin == 0 ? 30 : activityMin) : 0,
@@ -232,24 +241,253 @@ class _RecordScreenState extends State<RecordScreen> {
       note: _noteController.text.trim(),
     );
 
-    // Upsert locally first
+    // Persist locally immediately so data is never lost.
     await store.upsert(record);
 
-    // Save to API asynchronously in background
-    RecordService.instance.saveRecord(record).then((_) {
-      store.clearPendingSync(record.date);
-    }).catchError((err) {
-      if (err is ApiException && err.statusCode == 400) {
-        widget.onSaved('Gagal mengirim ke server: ${err.message}');
-      } else {
+    // Per API guide: send lifestyle logs FIRST so the ML has them when /records computes the score.
+    await _submitLifestyleLogs(record);
+
+    // Only POST /records when there's a metric it accepts; lifestyle-only
+    // input is already sent above via /health-logs and would 400 here.
+    // May take up to 90 s on ML cold start.
+    HealthScore? score;
+    if (hasRecordMetric) {
+      try {
+        score = await RecordService.instance.saveRecord(record);
+        store.clearPendingSync(record.date);
+      } catch (err) {
+        if (err is ApiException && err.statusCode == 400) {
+          if (mounted) {
+            setState(() => _saving = false);
+            widget.onSaved('Gagal mengirim ke server: ${(err).message}');
+          }
+          return;
+        }
+        // Network/server errors: mark for later sync but don't block the user.
         store.markPendingSync(record.date);
       }
-    });
-
-    if (mounted) {
-      widget.onSaved('Catatan tersimpan · Skor kesehatan ${record.score}/100.');
-      widget.onView(MainView.beranda);
     }
+
+    if (!mounted) return;
+    setState(() => _saving = false);
+
+    if (score != null && score.topPenalties.isNotEmpty) {
+      await _showScoreResultSheet(score);
+    }
+    if (mounted) {
+      final msg = score != null
+          ? 'Catatan tersimpan · ${score.statusLabel} · Skor ${score.healthScore.toInt()}/100.'
+          : 'Catatan tersimpan. Skor belum tersedia, coba lagi nanti.';
+      widget.onSaved(msg);
+    }
+
+    if (mounted) widget.onView(MainView.beranda);
+  }
+
+  /// Sends lifestyle metrics to /health-logs in parallel so the ML model can
+  /// factor them into the score computed by /records. Must be awaited before
+  /// calling saveRecord. Failures are silently ignored.
+  Future<void> _submitLifestyleLogs(HealthRecord record) async {
+    // Noon UTC for the record's date, but never in the future (the backend
+    // rejects a future measured_at). See RecordService._recordedAt.
+    final nowUtc = DateTime.now().toUtc();
+    var measuredAt = DateTime.utc(
+        record.date.year, record.date.month, record.date.day, 12, 0, 0);
+    if (measuredAt.isAfter(nowUtc)) measuredAt = nowUtc;
+
+    // Map local stressIndex (0=Santai, 1=Normal, 2=Tinggi) → API scale 1–10.
+    const stressScale = [2.0, 5.0, 9.0];
+
+    final futures = <Future<void>>[
+      RecordService.instance.submitHealthLog(
+        metricType: 'stress',
+        valueNumeric: stressScale[record.stressIndex],
+        measuredAt: measuredAt,
+      ),
+    ];
+
+    if (record.sleepHours != null) {
+      futures.add(RecordService.instance.submitHealthLog(
+        metricType: 'sleep',
+        valueNumeric: record.sleepHours,
+        measuredAt: measuredAt,
+      ));
+    }
+
+    if (record.active30 && record.activityMinutes > 0) {
+      futures.add(RecordService.instance.submitHealthLog(
+        metricType: 'activity',
+        valueNumeric: record.activityMinutes.toDouble(),
+        measuredAt: measuredAt,
+      ));
+    }
+
+    if (record.smoke) {
+      futures.add(RecordService.instance.submitHealthLog(
+        metricType: 'smoking',
+        valueNumeric: 1,
+        measuredAt: measuredAt,
+      ));
+    }
+
+    if (record.alcohol) {
+      futures.add(RecordService.instance.submitHealthLog(
+        metricType: 'alcohol',
+        valueNumeric: 1,
+        measuredAt: measuredAt,
+      ));
+    }
+
+    try {
+      await Future.wait(futures);
+    } catch (_) {}
+  }
+
+  /// Bottom-sheet displayed after a successful save when the ML model returns
+  /// a score with penalties. Colors follow the API status contract:
+  ///   aman → green, waswas → amber, bahaya → red.
+  Future<void> _showScoreResultSheet(HealthScore score) async {
+    final scoreColor = switch (score.status) {
+      'bahaya' => AppColors.red,
+      'waswas' => AppColors.amber,
+      _ => AppColors.lime,
+    };
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final c = AppColors.of(ctx);
+        return Container(
+          decoration: BoxDecoration(
+            color: c.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: EdgeInsets.fromLTRB(
+            24,
+            20,
+            24,
+            MediaQuery.of(ctx).viewInsets.bottom + 40,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: c.line,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: scoreColor.withValues(alpha: .15),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${score.healthScore.toInt()}',
+                          style: TextStyle(
+                            color: scoreColor,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Skor Kesehatan Anda',
+                            style: TextStyle(color: c.muted, fontSize: 12),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            score.statusLabel,
+                            style: TextStyle(
+                              color: scoreColor,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  score.message,
+                  style: TextStyle(color: c.text, fontSize: 13.5, height: 1.5),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Faktor yang Perlu Diperhatikan',
+                  style: TextStyle(
+                    color: c.text,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                ...score.topPenalties.map(
+                  (penalty) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.warning_amber_rounded,
+                            color: scoreColor, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            penalty,
+                            style: TextStyle(
+                              color: c.text,
+                              fontSize: 13,
+                              height: 1.45,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: FilledButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: const Text('Mengerti'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   // Calculates completion progress out of 8 parameters
@@ -259,7 +497,7 @@ class _RecordScreenState extends State<RecordScreen> {
     if (_sysController.text.trim().isNotEmpty && _diaController.text.trim().isNotEmpty) count++;
     if (_weightController.text.trim().isNotEmpty) count++;
     if (_medicineTaken) count++;
-    if (_meals.isNotEmpty) count++;
+    if (_mealsController.text.trim().isNotEmpty) count++;
     if (_active30) count++;
     if (_sleepController.text.trim().isNotEmpty) count++;
     if (_noteController.text.trim().isNotEmpty) count++;
@@ -1104,58 +1342,6 @@ class _RecordScreenState extends State<RecordScreen> {
     );
   }
 
-  Widget _buildMealChips(AppColors colors) {
-    final mealTypes = [
-      {'key': 'Sarapan', 'label': '🍳 Sarapan'},
-      {'key': 'Makan Siang', 'label': '🍲 Makan Siang'},
-      {'key': 'Makan Malam', 'label': '🥗 Makan Malam'},
-      {'key': 'Camilan', 'label': '🍎 Camilan'},
-    ];
-
-    return Wrap(
-      spacing: 9,
-      runSpacing: 9,
-      children: mealTypes.map((meal) {
-        final key = meal['key']!;
-        final label = meal['label']!;
-        final isSelected = _meals.contains(key);
-
-        return InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            setState(() {
-              if (_meals.contains(key)) {
-                _meals.remove(key);
-              } else {
-                _meals.add(key);
-              }
-            });
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: isSelected ? AppColors.orange.withValues(alpha: .15) : colors.elevated,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isSelected ? AppColors.orange : Colors.transparent,
-                width: 1.5,
-              ),
-            ),
-            child: Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? AppColors.orange : colors.text,
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
   Widget _buildStressSelector(AppColors colors) {
     final stressLevels = [
       {'index': 0, 'emoji': '😌', 'label': 'Santai', 'color': AppColors.green},
@@ -1379,7 +1565,36 @@ class _RecordScreenState extends State<RecordScreen> {
               iconColor: AppColors.orange,
               iconBg: AppColors.tint(AppColors.orange),
               children: [
-                _buildMealChips(colors),
+                Text(
+                  'Ceritakan apa saja yang kamu makan hari ini',
+                  style: TextStyle(color: colors.muted, fontSize: 12.5, height: 1.4),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _mealsController,
+                  maxLines: 3,
+                  maxLength: 500,
+                  style: TextStyle(color: colors.text),
+                  decoration: InputDecoration(
+                    hintText: 'Contoh: nasi padang rendang, es teh manis, buah apel...',
+                    filled: true,
+                    fillColor: colors.elevated,
+                    contentPadding: const EdgeInsets.all(12),
+                    counterStyle: TextStyle(color: colors.muted, fontSize: 11),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: colors.line),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: colors.line),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppColors.orange),
+                    ),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 14),
