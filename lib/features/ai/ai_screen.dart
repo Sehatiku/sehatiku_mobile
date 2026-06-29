@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:sehatiku_mobile/core/core.dart';
 import 'package:sehatiku_mobile/data/repositories/health_store.dart';
+import 'package:sehatiku_mobile/data/services/dashboard_service.dart';
 import 'package:sehatiku_mobile/shared/widgets/widgets.dart';
 
 class _RecommendationItem {
@@ -40,29 +41,61 @@ class AiScreen extends StatelessWidget {
     final foreLabel = const ['7 hari', '30 hari', '90 hari'][forecastIndex];
     final latest = HealthScope.of(context).latest;
     final today = HealthScope.of(context).today;
-    final risk = latest?.riskPercent ?? 0;
-    final hasData = latest != null;
-    final riskColor = !hasData
-        ? c.muted
-        : risk < 15
-            ? AppColors.lime
-            : risk < 30
-                ? AppColors.amber
-                : AppColors.red;
-    final riskLabel = !hasData
-        ? 'Belum ada data'
-        : risk < 15
-            ? 'Risiko Rendah'
-            : risk < 30
-                ? 'Risiko Sedang'
-                : 'Risiko Tinggi';
-    final riskDesc = !hasData
-        ? 'Catat data harian Anda agar AI dapat memperkirakan risiko komplikasi.'
-        : risk < 15
-            ? 'Indikator diabetes & hipertensi Anda terkendali dengan baik.'
-            : risk < 30
-                ? 'Beberapa indikator perlu diperhatikan minggu ini.'
-                : 'Beberapa indikator berisiko. Pertimbangkan konsultasi dengan dokter Anda.';
+
+    // Prefer API risk data; fall back to locally computed heuristic.
+    final apiDashboard = DashboardService.instance.cachedDashboard;
+    final apiRisk = apiDashboard?.risk;
+    final hasApiScore = apiRisk != null && apiRisk.scoredAt != null;
+    final hasData = hasApiScore || latest != null;
+
+    final int risk;
+    final Color riskColor;
+    final String riskLabel;
+    final String riskDesc;
+
+    if (hasApiScore) {
+      // Dart promotes apiRisk to non-null here via the hasApiScore check.
+      risk = apiRisk.score;
+      riskColor = switch (apiRisk.status) {
+        'bahaya' => AppColors.red,
+        'waswas' => AppColors.amber,
+        _ => AppColors.lime,
+      };
+      // Capitalise first letter of riskLabel from API (e.g. 'rendah' → 'Rendah').
+      final label = apiRisk.riskLabel;
+      riskLabel = label.isEmpty
+          ? 'Aman'
+          : '${label[0].toUpperCase()}${label.substring(1)}';
+      riskDesc = apiRisk.mainFactor.isNotEmpty
+          ? 'Faktor utama: ${apiRisk.mainFactor}'
+          : _riskStatusDesc(apiRisk.status);
+    } else if (!hasData) {
+      risk = 0;
+      riskColor = c.muted;
+      riskLabel = 'Belum ada data';
+      riskDesc = 'Catat data harian Anda agar AI dapat memperkirakan risiko komplikasi.';
+    } else {
+      final localRisk = latest?.riskPercent ?? 0;
+      risk = localRisk;
+      riskColor = localRisk < 15
+          ? AppColors.lime
+          : localRisk < 30
+              ? AppColors.amber
+              : AppColors.red;
+      riskLabel = localRisk < 15
+          ? 'Risiko Rendah'
+          : localRisk < 30
+              ? 'Risiko Sedang'
+              : 'Risiko Tinggi';
+      riskDesc = localRisk < 15
+          ? 'Indikator diabetes & hipertensi Anda terkendali dengan baik.'
+          : localRisk < 30
+              ? 'Beberapa indikator perlu diperhatikan minggu ini.'
+              : 'Beberapa indikator berisiko. Pertimbangkan konsultasi dengan dokter Anda.';
+    }
+
+    // API recommendations from the ML model (ready-to-display Indonesian text).
+    final apiRecommendations = apiDashboard?.recommendations ?? [];
 
     // Generate dynamic recommendations based on today's logged data in HealthStore
     final List<_RecommendationItem> recommendationItems = [];
@@ -132,15 +165,6 @@ class AiScreen extends StatelessWidget {
           trailing: const RecommendCheck(),
         ));
       }
-    } else {
-      recommendationItems.add(_RecommendationItem(
-        icon: Icons.water_drop_rounded,
-        color: AppColors.cyan,
-        bg: AppColors.tint(AppColors.cyan),
-        title: 'Minum 2 liter air',
-        desc: 'Sekitar 8 gelas hari ini untuk hidrasi optimal.',
-        trailing: const RecommendBadge(text: '5/8', color: AppColors.cyan),
-      ));
     }
 
     // 3. Physical Activity Recommendation
@@ -187,7 +211,7 @@ class AiScreen extends StatelessWidget {
           title: 'Obat harian dikonsumsi',
           desc: today.medicineName.isNotEmpty
               ? '${today.medicineName} telah diminum sesuai petunjuk dokter.'
-              : 'Metformin telah diminum sesuai petunjuk dokter.',
+              : 'Obat harian Anda telah diminum sesuai petunjuk dokter.',
           trailing: const RecommendCheck(),
         ));
       } else {
@@ -198,7 +222,7 @@ class AiScreen extends StatelessWidget {
           title: 'Minum obat harian',
           desc: today.medicineName.isNotEmpty
               ? '${today.medicineName} belum tercatat diminum hari ini.'
-              : 'Metformin belum tercatat diminum hari ini.',
+              : 'Obat harian Anda belum tercatat diminum hari ini.',
           trailing: const RecommendBadge(text: 'Mendesak', color: AppColors.orange),
         ));
       }
@@ -300,6 +324,88 @@ class AiScreen extends StatelessWidget {
                   ],
                 ),
               ),
+
+              // API recommendations from the ML model — display as-is (already
+              // in Indonesian and ready to show per API contract).
+              if (apiRecommendations.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                AppCard(
+                  padding: 0,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                color: AppColors.tint(AppColors.violet),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.auto_awesome_rounded,
+                                size: 16,
+                                color: AppColors.violet,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Dari Sehatiku AI',
+                              style: TextStyle(
+                                color: c.text,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Divider(color: c.line, height: 1),
+                      ...apiRecommendations.asMap().entries.map((entry) {
+                        final isLast =
+                            entry.key == apiRecommendations.length - 1;
+                        return Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    margin: const EdgeInsets.only(top: 5),
+                                    decoration: const BoxDecoration(
+                                      color: AppColors.violet,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      entry.value,
+                                      style: TextStyle(
+                                        color: c.text,
+                                        fontSize: 13,
+                                        height: 1.45,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (!isLast) Divider(color: c.line, height: 1),
+                          ],
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 24),
               const SectionTitle(title: 'Prediksi Risiko'),
               const SizedBox(height: 13),
@@ -460,6 +566,14 @@ class AiScreen extends StatelessWidget {
     );
   }
 }
+
+/// Maps a `DashboardRisk.status` value to a human-readable description.
+String _riskStatusDesc(String status) => switch (status) {
+      'bahaya' =>
+        'Beberapa indikator berisiko. Pertimbangkan konsultasi dengan dokter Anda.',
+      'waswas' => 'Beberapa indikator perlu diperhatikan minggu ini.',
+      _ => 'Indikator diabetes & hipertensi Anda terkendali dengan baik.',
+    };
 
 class _DividerLine extends StatelessWidget {
   const _DividerLine();

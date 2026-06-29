@@ -68,11 +68,6 @@ class NotificationModel {
     );
   }
 
-  static String _parseMessage(Map<String, dynamic> json) {
-    final val = json['body'] ?? json['message'] ?? json['desc'] ?? json['content'] ?? '';
-    return val.toString().trim();
-  }
-
   Map<String, dynamic> toJson() => {
         'id': id,
         'title': title,

@@ -92,6 +92,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       } catch (statusError) {
         debugPrint('Failed to fetch today-status: $statusError');
       }
+
+      // Sync recent records for dashboard charts
+      try {
+        final entries = await RecordService.instance.fetchHistory(limit: 7);
+        if (mounted) await HealthScope.of(context).mergeHistory(entries);
+      } catch (_) {}
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
@@ -254,10 +260,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final latest = store.latest;
     final today = store.today;
-    final bsRecords =
-        store.recent(7).where((r) => r.bloodSugar != null).toList();
+    final recentRecords = store.recent(7);
+    final bsRecords = recentRecords.where((r) => r.bloodSugar != null).toList();
     final bsValues = bsRecords.map((r) => r.bloodSugar!.toDouble()).toList();
     final bsTrend = trendInfo(bsValues, lowerIsBetter: true);
+    final bpRecords = recentRecords.where((r) => r.systolic != null).toList();
+    final bpValues = bpRecords.map((r) => r.systolic!.toDouble()).toList();
+    final bpTrend = trendInfo(bpValues, lowerIsBetter: true);
+    final diseaseType = _dashboard?.profile.diseaseType;
+    final showBS = diseaseType != 'hypertension';
+    final showBP = diseaseType == 'hypertension' || diseaseType == 'both';
 
     return AppScroll(
       child: Column(
@@ -335,9 +347,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
 
           // ── AI Risk Card (from API) or local score card ──────────────────────
+          // Only show _ApiRiskCard when the ML model has actually produced a
+          // score (scoredAt != null). When scoredAt is null the backend returns
+          // score=0 and risk_label="" which would crash on riskLabel[0].
           if (_loading)
             const _LoadingCard()
-          else if (_dashboard != null)
+          else if (_dashboard != null && _dashboard!.risk.scoredAt != null)
             _ApiRiskCard(dashboard: _dashboard!)
           else
             HealthScoreCard(record: latest),
@@ -418,7 +433,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           // ── Streak & logging (from API) ──────────────────────────────────────
           if (_dashboard != null) ...[
             const SizedBox(height: 14),
-            _StreakCard(logging: _dashboard!.logging),
+            _StreakCard(
+              logging: _dashboard!.logging,
+              loggedTodayOverride: _todayStatus?.loggedToday,
+            ),
           ],
           const SizedBox(height: 28),
 
@@ -498,61 +516,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ── Blood sugar chart (local data) ───────────────────────────────────
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Gula Darah · ${bsValues.length} catatan',
-                        style: TextStyle(
-                          color: colors.text,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14.5,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(bsTrend.icon, color: bsTrend.color, size: 15),
-                        const SizedBox(width: 3),
-                        Text(bsTrend.label,
-                            style: TextStyle(
-                                color: bsTrend.color,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12)),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 96,
-                  child: bsValues.length < 2
-                      ? const ChartEmpty()
-                      : TrendChart(color: AppColors.primary, values: bsValues),
-                ),
-                const SizedBox(height: 6),
-                if (bsValues.length >= 2)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: bsRecords
-                        .map((r) => Text(dayName(r.date).substring(0, 3),
-                            style: TextStyle(
-                                color: colors.muted,
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w600)))
-                        .toList(),
-                  ),
-              ],
+          // ── Health trend charts ──────────────────────────────────────────────
+          if (showBS)
+            _MetricChartCard(
+              label: 'Gula Darah',
+              values: bsValues,
+              records: bsRecords,
+              trend: bsTrend,
+              color: AppColors.primary,
             ),
-          ),
+          if (showBS && showBP) const SizedBox(height: 12),
+          if (showBP)
+            _MetricChartCard(
+              label: 'Tekanan Darah (Sistolik)',
+              values: bpValues,
+              records: bpRecords,
+              trend: bpTrend,
+              color: AppColors.pink,
+            ),
         ],
       ),
     );
@@ -774,9 +755,11 @@ class _DailyChecklistCard extends StatelessWidget {
     final colors = AppColors.of(context);
 
     final bool medicineDone = today?.medicineTaken ?? false;
-    final bool glucoseDone = dashboard?.latestMeasurements.glucose != null ||
+    final bool glucoseDone =
+        _isMeasuredToday(dashboard?.latestMeasurements.glucose?.measuredAt) ||
         today?.bloodSugar != null;
-    final bool bpDone = dashboard?.latestMeasurements.bloodPressure != null ||
+    final bool bpDone =
+        _isMeasuredToday(dashboard?.latestMeasurements.bloodPressure?.measuredAt) ||
         (today?.systolic != null && today!.systolic! > 0);
 
     final doneCount =
@@ -1452,13 +1435,15 @@ class _MeasurementGrid extends StatelessWidget {
 
 /// Streak & logging status card with 7-day week view.
 class _StreakCard extends StatelessWidget {
-  const _StreakCard({required this.logging});
+  const _StreakCard({required this.logging, this.loggedTodayOverride});
 
   final DashboardLogging logging;
+  final bool? loggedTodayOverride;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final loggedToday = loggedTodayOverride ?? logging.loggedToday;
     final Color streakColor =
         logging.streakDays >= 7 ? AppColors.lime : AppColors.amber;
     final now = DateTime.now();
@@ -1486,7 +1471,7 @@ class _StreakCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      logging.loggedToday
+                      loggedToday
                           ? 'Sudah catat hari ini ✅'
                           : 'Belum catat hari ini',
                       style: TextStyle(
@@ -1515,7 +1500,7 @@ class _StreakCard extends StatelessWidget {
               final daysAgo = 6 - i;
               final day = now.subtract(Duration(days: daysAgo));
               final label = _shortDay(day.weekday);
-              final isFilled = logging.loggedToday
+              final isFilled = loggedToday
                   ? daysAgo < logging.streakDays
                   : (daysAgo > 0 && daysAgo <= logging.streakDays);
               final isToday = daysAgo == 0;
@@ -1832,6 +1817,14 @@ class HealthScoreCard extends StatelessWidget {
   }
 }
 
+bool _isMeasuredToday(String? isoDate) {
+  if (isoDate == null) return false;
+  final d = DateTime.tryParse(isoDate);
+  if (d == null) return false;
+  final now = DateTime.now();
+  return d.year == now.year && d.month == now.month && d.day == now.day;
+}
+
 String _scoreInsight(int score) {
   if (score >= 85) {
     return 'Kondisi Anda sangat baik. Pertahankan kebiasaan ini.';
@@ -2115,6 +2108,85 @@ class _MissedLogsBanner extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _MetricChartCard extends StatelessWidget {
+  const _MetricChartCard({
+    required this.label,
+    required this.values,
+    required this.records,
+    required this.trend,
+    required this.color,
+  });
+
+  final String label;
+  final List<double> values;
+  final List<HealthRecord> records;
+  final TrendInfo trend;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  '$label · ${values.length} catatan',
+                  style: TextStyle(
+                    color: colors.text,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14.5,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(trend.icon, color: trend.color, size: 15),
+                  const SizedBox(width: 3),
+                  Text(
+                    trend.label,
+                    style: TextStyle(
+                        color: trend.color,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 96,
+            child: values.length < 2
+                ? const ChartEmpty()
+                : TrendChart(color: color, values: values),
+          ),
+          const SizedBox(height: 6),
+          if (values.length >= 2)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: records
+                  .map((r) => Text(
+                        dayName(r.date).substring(0, 3),
+                        style: TextStyle(
+                            color: colors.muted,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600),
+                      ))
+                  .toList(),
+            ),
+        ],
       ),
     );
   }
