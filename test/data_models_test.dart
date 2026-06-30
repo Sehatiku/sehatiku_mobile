@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sehatiku_mobile/data/models/assigned_nakes_info.dart';
+import 'package:sehatiku_mobile/data/models/baseline_entry.dart';
 import 'package:sehatiku_mobile/data/models/history_entry.dart';
 import 'package:sehatiku_mobile/data/models/notification_model.dart';
 
@@ -196,6 +197,63 @@ void main() {
       expect(entry.systolic, isNull);
       expect(entry.diastolic, isNull);
       expect(entry.weight, isNull);
+    });
+  });
+
+  group('BaselineEntry Model Tests', () {
+    test('fromJson parses valid baseline JSON successfully', () {
+      final json = {
+        'date': '2026-06-30',
+        'blood_sugar': 120,
+        'systolic': 125,
+        'diastolic': 80,
+        'weight': 70.0,
+      };
+
+      final entry = BaselineEntry.fromJson(json);
+
+      expect(entry.date, equals(DateTime(2026, 6, 30)));
+      expect(entry.bloodSugar, equals(120));
+      expect(entry.systolic, equals(125));
+      expect(entry.diastolic, equals(80));
+      expect(entry.weight, equals(70.0));
+    });
+
+    test('fromJson falls back to alternative field names', () {
+      final json = {
+        'recorded_at': '2026-06-15T08:00:00Z',
+        'glucose': 130,
+        'systolic': 130,
+        'diastolic': 85,
+        'weight': 72.5,
+      };
+
+      final entry = BaselineEntry.fromJson(json);
+
+      expect(entry.date, equals(DateTime(2026, 6, 15)));
+      expect(entry.bloodSugar, equals(130));
+      expect(entry.systolic, equals(130));
+      expect(entry.diastolic, equals(85));
+      expect(entry.weight, equals(72.5));
+    });
+
+    test('toJson converts model back to JSON map successfully', () {
+      final original = BaselineEntry(
+        date: DateTime(2026, 6, 30),
+        bloodSugar: 120,
+        systolic: 125,
+        diastolic: 80,
+        weight: 70.0,
+      );
+
+      final json = original.toJson();
+      final parsed = BaselineEntry.fromJson(json);
+
+      expect(parsed.date, equals(original.date));
+      expect(parsed.bloodSugar, equals(original.bloodSugar));
+      expect(parsed.systolic, equals(original.systolic));
+      expect(parsed.diastolic, equals(original.diastolic));
+      expect(parsed.weight, equals(original.weight));
     });
   });
 }
