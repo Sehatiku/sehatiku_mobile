@@ -255,5 +255,53 @@ void main() {
       expect(parsed.diastolic, equals(original.diastolic));
       expect(parsed.weight, equals(original.weight));
     });
+
+    test('fromJson parses full baseline API response successfully', () {
+      final json = {
+        "id": "e9e94fa5-0357-4ab6-a9b1-78c0cf412e94",
+        "recorded_at": "2026-06-29T18:27:34.162044Z",
+        "recorded_by_nakes_name": "dr. Surya",
+        "notes": "Some notes here",
+        "bmi": 31.5,
+        "bmi_category": "obese",
+        "systolic_bp_mmhg": 158,
+        "diastolic_bp_mmhg": 96,
+        "hypertension_status": "stage2",
+        "fasting_glucose_mgdl": 165,
+        "hba1c_pct": 9.2,
+        "diabetes_status": "uncontrolled",
+        "total_cholesterol_mgdl": 240,
+        "hdl_mgdl": 38,
+        "ldl_mgdl": 165,
+        "triglycerides_mgdl": 220,
+        "cvd_risk_10yr_pct": 28.5,
+        "cvd_risk_category": "very_high",
+        "egfr": 56,
+        "uacr": 35
+      };
+
+      final entry = BaselineEntry.fromJson(json);
+
+      expect(entry.id, equals("e9e94fa5-0357-4ab6-a9b1-78c0cf412e94"));
+      expect(entry.date, equals(DateTime(2026, 6, 29)));
+      expect(entry.recordedByNakesName, equals("dr. Surya"));
+      expect(entry.notes, equals("Some notes here"));
+      expect(entry.bmi, equals(31.5));
+      expect(entry.bmiCategory, equals("obese"));
+      expect(entry.systolic, equals(158));
+      expect(entry.diastolic, equals(96));
+      expect(entry.hypertensionStatus, equals("stage2"));
+      expect(entry.bloodSugar, equals(165));
+      expect(entry.hba1cPct, equals(9.2));
+      expect(entry.diabetesStatus, equals("uncontrolled"));
+      expect(entry.totalCholesterolMgdl, equals(240));
+      expect(entry.hdlMgdl, equals(38));
+      expect(entry.ldlMgdl, equals(165));
+      expect(entry.triglyceridesMgdl, equals(220));
+      expect(entry.cvdRisk10yrPct, equals(28.5));
+      expect(entry.cvdRiskCategory, equals("very_high"));
+      expect(entry.egfr, equals(56));
+      expect(entry.uacr, equals(35));
+    });
   });
 }

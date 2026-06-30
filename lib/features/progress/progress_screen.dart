@@ -487,60 +487,68 @@ class _ProgressScreenState extends State<ProgressScreen> {
               separatorBuilder: (context, index) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final entry = baselines[index];
-                return AppCard(
-                  padding: 16,
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppColors.tint(AppColors.primary),
-                          shape: BoxShape.circle,
+                return InkWell(
+                  onTap: () => _showBaselineDetail(entry),
+                  borderRadius: BorderRadius.circular(22),
+                  child: AppCard(
+                    padding: 16,
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.tint(AppColors.primary),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.analytics_rounded,
+                            color: AppColors.primary,
+                            size: 20,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.analytics_rounded,
-                          color: AppColors.primary,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              formatLongDate(entry.date),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                formatLongDate(entry.date),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 6),
-                            Wrap(
-                              spacing: 12,
-                              runSpacing: 4,
-                              children: [
-                                if (entry.bloodSugar != null)
-                                  _buildBaselineSmallStat(
-                                    'Gula Darah:',
-                                    '${entry.bloodSugar} mg/dL',
-                                  ),
-                                if (entry.systolic != null && entry.diastolic != null)
-                                  _buildBaselineSmallStat(
-                                    'TD:',
-                                    '${entry.systolic}/${entry.diastolic} mmHg',
-                                  ),
-                                if (entry.weight != null)
-                                  _buildBaselineSmallStat(
-                                    'Berat:',
-                                    '${entry.weight} kg',
-                                  ),
-                              ],
-                            ),
-                          ],
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 12,
+                                runSpacing: 4,
+                                children: [
+                                  if (entry.bloodSugar != null)
+                                    _buildBaselineSmallStat(
+                                      'Gula Darah:',
+                                      '${entry.bloodSugar} mg/dL',
+                                    ),
+                                  if (entry.systolic != null && entry.diastolic != null)
+                                    _buildBaselineSmallStat(
+                                      'TD:',
+                                      '${entry.systolic}/${entry.diastolic} mmHg',
+                                    ),
+                                  if (entry.weight != null)
+                                    _buildBaselineSmallStat(
+                                      'Berat:',
+                                      '${entry.weight} kg',
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: AppColors.of(context).muted,
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -713,6 +721,455 @@ class _ProgressScreenState extends State<ProgressScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  String _translateBmi(String? category) {
+    if (category == null) return '—';
+    return switch (category.toLowerCase()) {
+      'underweight' => 'Berat Badan Kurang',
+      'normal' => 'Normal',
+      'overweight' => 'Kelebihan Berat Badan',
+      'obese' => 'Obesitas',
+      _ => category,
+    };
+  }
+
+  Color _colorForBmi(String? category) {
+    if (category == null) return AppColors.primary;
+    return switch (category.toLowerCase()) {
+      'normal' => AppColors.green,
+      'overweight' => AppColors.amber,
+      'underweight' || 'obese' => AppColors.red,
+      _ => AppColors.primary,
+    };
+  }
+
+  String _translateHypertension(String? status) {
+    if (status == null) return '—';
+    return switch (status.toLowerCase()) {
+      'normal' => 'Normal',
+      'prehypertension' => 'Prehipertensi',
+      'stage1' => 'Hipertensi Derajat 1',
+      'stage2' => 'Hipertensi Derajat 2',
+      'crisis' => 'Krisis Hipertensi',
+      _ => status,
+    };
+  }
+
+  Color _colorForHypertension(String? status) {
+    if (status == null) return AppColors.primary;
+    return switch (status.toLowerCase()) {
+      'normal' => AppColors.green,
+      'prehypertension' => AppColors.amber,
+      'stage1' || 'stage2' || 'crisis' => AppColors.red,
+      _ => AppColors.primary,
+    };
+  }
+
+  String _translateDiabetes(String? status) {
+    if (status == null) return '—';
+    return switch (status.toLowerCase()) {
+      'normal' => 'Normal',
+      'prediabetes' => 'Prediabetes',
+      'controlled' => 'Terkontrol',
+      'uncontrolled' => 'Tidak Terkontrol',
+      _ => status,
+    };
+  }
+
+  Color _colorForDiabetes(String? status) {
+    if (status == null) return AppColors.primary;
+    return switch (status.toLowerCase()) {
+      'normal' || 'controlled' => AppColors.green,
+      'prediabetes' => AppColors.amber,
+      'uncontrolled' => AppColors.red,
+      _ => AppColors.primary,
+    };
+  }
+
+  String _translateCvd(String? category) {
+    if (category == null) return '—';
+    return switch (category.toLowerCase()) {
+      'low' => 'Rendah',
+      'moderate' => 'Sedang',
+      'high' => 'Tinggi',
+      'very_high' => 'Sangat Tinggi',
+      _ => category,
+    };
+  }
+
+  Color _colorForCvd(String? category) {
+    if (category == null) return AppColors.primary;
+    return switch (category.toLowerCase()) {
+      'low' => AppColors.green,
+      'moderate' => AppColors.amber,
+      'high' || 'very_high' => AppColors.red,
+      _ => AppColors.primary,
+    };
+  }
+
+  Widget _buildStatusBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.tint(color, 0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(BuildContext ctx, String label, String value, {Widget? badge}) {
+    final c = AppColors.of(ctx);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: c.muted,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  color: c.text,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              if (badge != null) ...[
+                const SizedBox(width: 8),
+                badge,
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailCategoryCard(
+    BuildContext ctx, {
+    required String title,
+    required IconData icon,
+    required Color iconColor,
+    required List<Widget> items,
+  }) {
+    if (items.isEmpty) return const SizedBox.shrink();
+    final c = AppColors.of(ctx);
+    return AppCard(
+      padding: 16,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: iconColor, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Divider(color: c.line, height: 1),
+          const SizedBox(height: 4),
+          ...items,
+        ],
+      ),
+    );
+  }
+
+  void _showBaselineDetail(BaselineEntry entry) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final c = AppColors.of(ctx);
+        return Container(
+          decoration: BoxDecoration(
+            color: c.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: EdgeInsets.fromLTRB(
+            20,
+            16,
+            20,
+            MediaQuery.of(ctx).viewInsets.bottom + 30,
+          ),
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: c.line,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Detail Baseline Klinis',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          formatLongDate(entry.date),
+                          style: TextStyle(
+                            color: c.muted,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close_rounded, color: c.muted),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              if (entry.recordedByNakesName != null && entry.recordedByNakesName!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.person_rounded, size: 14, color: c.muted),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Pemeriksa: ${entry.recordedByNakesName}',
+                      style: TextStyle(
+                        color: c.muted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 16),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (entry.notes != null && entry.notes!.trim().isNotEmpty) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: AppColors.tint(AppColors.primary, 0.08),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.tint(AppColors.primary, 0.2)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Catatan Pemeriksa',
+                                style: TextStyle(
+                                  color: AppColors.primary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                entry.notes!,
+                                style: TextStyle(
+                                  color: c.text,
+                                  fontSize: 13,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      _buildDetailCategoryCard(
+                        ctx,
+                        title: 'Antropometri & Tanda Vital',
+                        icon: Icons.monitor_heart_rounded,
+                        iconColor: AppColors.pink,
+                        items: [
+                          if (entry.bmi != null)
+                            _buildDetailRow(
+                              ctx,
+                              'Indeks Massa Tubuh (BMI)',
+                              '${entry.bmi}',
+                              badge: _buildStatusBadge(
+                                _translateBmi(entry.bmiCategory),
+                                _colorForBmi(entry.bmiCategory),
+                              ),
+                            ),
+                          if (entry.systolic != null && entry.diastolic != null)
+                            _buildDetailRow(
+                              ctx,
+                              'Tekanan Darah',
+                              '${entry.systolic}/${entry.diastolic} mmHg',
+                              badge: _buildStatusBadge(
+                                _translateHypertension(entry.hypertensionStatus),
+                                _colorForHypertension(entry.hypertensionStatus),
+                              ),
+                            ),
+                          if (entry.weight != null)
+                            _buildDetailRow(
+                              ctx,
+                              'Berat Badan',
+                              '${entry.weight} kg',
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      _buildDetailCategoryCard(
+                        ctx,
+                        title: 'Metabolik & Gula Darah',
+                        icon: Icons.water_drop_rounded,
+                        iconColor: AppColors.primary,
+                        items: [
+                          if (entry.bloodSugar != null)
+                            _buildDetailRow(
+                              ctx,
+                              'Gula Darah Puasa',
+                              '${entry.bloodSugar} mg/dL',
+                              badge: _buildStatusBadge(
+                                _translateDiabetes(entry.diabetesStatus),
+                                _colorForDiabetes(entry.diabetesStatus),
+                              ),
+                            ),
+                          if (entry.hba1cPct != null)
+                            _buildDetailRow(
+                              ctx,
+                              'HbA1c',
+                              '${entry.hba1cPct}%',
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      _buildDetailCategoryCard(
+                        ctx,
+                        title: 'Profil Lipid (Kolesterol)',
+                        icon: Icons.analytics_rounded,
+                        iconColor: AppColors.violet,
+                        items: [
+                          if (entry.totalCholesterolMgdl != null)
+                            _buildDetailRow(
+                              ctx,
+                              'Total Kolesterol',
+                              '${entry.totalCholesterolMgdl} mg/dL',
+                            ),
+                          if (entry.ldlMgdl != null)
+                            _buildDetailRow(
+                              ctx,
+                              'LDL (Kolesterol Jahat)',
+                              '${entry.ldlMgdl} mg/dL',
+                            ),
+                          if (entry.hdlMgdl != null)
+                            _buildDetailRow(
+                              ctx,
+                              'HDL (Kolesterol Baik)',
+                              '${entry.hdlMgdl} mg/dL',
+                            ),
+                          if (entry.triglyceridesMgdl != null)
+                            _buildDetailRow(
+                              ctx,
+                              'Trigliserida',
+                              '${entry.triglyceridesMgdl} mg/dL',
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      _buildDetailCategoryCard(
+                        ctx,
+                        title: 'Risiko Kardiovaskular (CVD)',
+                        icon: Icons.speed_rounded,
+                        iconColor: AppColors.orange,
+                        items: [
+                          if (entry.cvdRisk10yrPct != null)
+                            _buildDetailRow(
+                              ctx,
+                              'Skor Risiko 10-Tahun',
+                              '${entry.cvdRisk10yrPct}%',
+                              badge: _buildStatusBadge(
+                                _translateCvd(entry.cvdRiskCategory),
+                                _colorForCvd(entry.cvdRiskCategory),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      _buildDetailCategoryCard(
+                        ctx,
+                        title: 'Fungsi Ginjal',
+                        icon: Icons.health_and_safety_rounded,
+                        iconColor: AppColors.green,
+                        items: [
+                          if (entry.egfr != null)
+                            _buildDetailRow(
+                              ctx,
+                              'eGFR',
+                              '${entry.egfr} mL/min/1.73m²',
+                            ),
+                          if (entry.uacr != null)
+                            _buildDetailRow(
+                              ctx,
+                              'UACR',
+                              '${entry.uacr} mg/g',
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
