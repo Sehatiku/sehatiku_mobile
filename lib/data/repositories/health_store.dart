@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:sehatiku_mobile/data/models/baseline_entry.dart';
 import 'package:sehatiku_mobile/data/models/health_record.dart';
 import 'package:sehatiku_mobile/data/models/history_entry.dart';
 
@@ -13,7 +14,9 @@ class HealthStore extends ChangeNotifier {
 
   static const _storageKey = 'sehatiku_records_v1';
   static const _pendingSyncKey = 'sehatiku_pending_syncs_v1';
-
+  static const _baselineHistoryKey = 'sehatiku_baseline_history_v1';
+  
+  final List<BaselineEntry> _baselineHistory = [];
   final List<HealthRecord> _records = [];
   final Set<String> _pendingSyncDates = {};
   bool _loaded = false;
@@ -103,6 +106,21 @@ class HealthStore extends ChangeNotifier {
         ..clear()
         ..addAll(rawPending);
     }
+    final rawBaseline = prefs.getString(_baselineHistoryKey);
+    if (rawBaseline != null && rawBaseline.isNotEmpty) {
+      try {
+        final list = jsonDecode(rawBaseline) as List<dynamic>;
+        _baselineHistory
+          ..clear()
+          ..addAll(
+            list.map(
+              (e) => BaselineEntry.fromJson(e as Map<String, dynamic>),
+            ),
+          );
+      } catch (_) {
+        _baselineHistory.clear();
+      }
+    }
     _loaded = true;
     notifyListeners();
   }
@@ -159,6 +177,25 @@ class HealthStore extends ChangeNotifier {
     await _persist();
   }
 
+  List<BaselineEntry> get baselineHistory {
+    final sorted = [..._baselineHistory]..sort((a, b) => b.date.compareTo(a.date));
+    return sorted;
+  }
+
+  Future<void> mergeBaselineHistory(List<BaselineEntry> entries) async {
+    _baselineHistory
+      ..clear()
+      ..addAll(entries);
+    notifyListeners();
+    await _persistBaselineHistory();
+  }
+
+  Future<void> _persistBaselineHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = jsonEncode(_baselineHistory.map((e) => e.toJson()).toList());
+    await prefs.setString(_baselineHistoryKey, raw);
+  }
+
   Future<void> deleteFor(DateTime day) async {
     final key = HealthRecord.dayOf(day);
     _records.removeWhere((r) => r.date == key);
@@ -169,11 +206,13 @@ class HealthStore extends ChangeNotifier {
   Future<void> clear() async {
     _records.clear();
     _pendingSyncDates.clear();
+    _baselineHistory.clear();
     _loaded = false;
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_storageKey);
     await prefs.remove(_pendingSyncKey);
+    await prefs.remove(_baselineHistoryKey);
   }
 }
 

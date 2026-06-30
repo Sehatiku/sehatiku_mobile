@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:dio/dio.dart';
+import 'package:sehatiku_mobile/data/models/baseline_entry.dart';
 import 'package:sehatiku_mobile/data/models/health_record.dart';
 import 'package:sehatiku_mobile/data/models/health_score.dart';
 import 'package:sehatiku_mobile/data/models/history_entry.dart';
@@ -153,6 +154,23 @@ class RecordService {
       final rawList = resp.data['data'] as List<dynamic>;
       return rawList
           .map((e) => HistoryEntry.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      throw apiExceptionFrom(e);
+    }
+  }
+
+  /// GET /api/v1/patients/baseline/history
+  ///
+  /// Throws [ApiException] on failure.
+  Future<List<BaselineEntry>> fetchBaselineHistory() async {
+    try {
+      final resp = await ApiClient.instance.get(
+        '/api/v1/patients/baseline/history',
+      );
+      final rawList = resp.data['data'] as List<dynamic>;
+      return rawList
+          .map((e) => BaselineEntry.fromJson(e as Map<String, dynamic>))
           .toList();
     } on DioException catch (e) {
       throw apiExceptionFrom(e);

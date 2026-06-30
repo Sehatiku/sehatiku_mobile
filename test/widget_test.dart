@@ -175,6 +175,29 @@ void main() {
               ]
             },
           ));
+        } else if (options.path.contains('/api/v1/patients/baseline/history')) {
+          handler.resolve(Response(
+            requestOptions: options,
+            statusCode: 200,
+            data: {
+              'data': [
+                {
+                  'date': '2026-06-30',
+                  'blood_sugar': 120,
+                  'systolic': 125,
+                  'diastolic': 80,
+                  'weight': 70.0
+                },
+                {
+                  'date': '2026-06-15',
+                  'blood_sugar': 130,
+                  'systolic': 130,
+                  'diastolic': 85,
+                  'weight': 72.5
+                }
+              ]
+            },
+          ));
         } else {
           handler.next(options);
         }
