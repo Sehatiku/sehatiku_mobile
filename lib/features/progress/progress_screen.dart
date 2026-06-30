@@ -49,7 +49,7 @@ class _ProgressMetric {
 
 _ProgressMetric _metricFor(int index, List<HealthRecord> recs) {
   switch (index) {
-    case 1:
+    case 2:
       final rs = recs
           .where((r) => r.systolic != null && r.diastolic != null)
           .toList();
@@ -67,7 +67,7 @@ _ProgressMetric _metricFor(int index, List<HealthRecord> recs) {
         highText: sys.isEmpty ? '—' : '${sys.reduce(math.max).round()}',
         lowText: sys.isEmpty ? '—' : '${sys.reduce(math.min).round()}',
       );
-    case 2:
+    case 3:
       final rs = recs.where((r) => r.weight != null).toList();
       final vals = rs.map((r) => r.weight!).toList();
       return _ProgressMetric(
@@ -80,7 +80,7 @@ _ProgressMetric _metricFor(int index, List<HealthRecord> recs) {
         highText: vals.isEmpty ? '—' : vals.reduce(math.max).toStringAsFixed(1),
         lowText: vals.isEmpty ? '—' : vals.reduce(math.min).toStringAsFixed(1),
       );
-    case 3:
+    case 4:
       final rs = recs.toList();
       final vals = rs.map((r) => r.medicineTaken ? 100.0 : 0.0).toList();
       final taken = rs.where((r) => r.medicineTaken).length;
@@ -94,6 +94,7 @@ _ProgressMetric _metricFor(int index, List<HealthRecord> recs) {
         highText: rs.isEmpty ? '—' : '$taken hari',
         lowText: rs.isEmpty ? '—' : '${rs.length - taken} hari',
       );
+    case 1:
     default:
       final rs = recs.where((r) => r.bloodSugar != null).toList();
       final vals = rs.map((r) => r.bloodSugar!.toDouble()).toList();
@@ -167,151 +168,157 @@ class _ProgressScreenState extends State<ProgressScreen> {
   Widget build(BuildContext context) {
     final store = HealthScope.of(context);
     
-    if (widget.progressIndex == 4) {
-      return _buildBaselineView(store);
-    }
-
-    final count = const [7, 30, 365][widget.rangeIndex];
-    final recs = store.recent(count);
-    final metric = _metricFor(widget.progressIndex, recs);
-    final color = metric.color;
-    final values = metric.values;
-    final hasChart = values.length >= 2;
-    final trend = trendInfo(values, lowerIsBetter: metric.lowerIsBetter);
-    return AppScroll(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const PageHeading(
-            title: 'Progres Kesehatan',
-            subtitle: 'Pantau tren Anda dari waktu ke waktu',
-          ),
-          const SizedBox(height: 18),
-          SizedBox(
-            height: 40,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                for (var i = 0; i < 5; i++)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 9),
-                    child: PillTab(
-                      label: const [
-                        'Gula Darah',
-                        'Tekanan Darah',
-                        'Berat Badan',
-                        'Kepatuhan Obat',
-                        'Baseline',
-                      ][i],
-                      selected: widget.progressIndex == i,
-                      onTap: () => widget.onProgress(i),
-                    ),
-                  ),
-              ],
+    final Widget view;
+    if (widget.progressIndex == 0) {
+      view = _buildBaselineView(store);
+    } else {
+      final count = const [7, 30, 365][widget.rangeIndex];
+      final recs = store.recent(count);
+      final metric = _metricFor(widget.progressIndex, recs);
+      final color = metric.color;
+      final values = metric.values;
+      final hasChart = values.length >= 2;
+      final trend = trendInfo(values, lowerIsBetter: metric.lowerIsBetter);
+      view = AppScroll(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const PageHeading(
+              title: 'Progres Kesehatan',
+              subtitle: 'Pantau tren Anda dari waktu ke waktu',
             ),
-          ),
-          const SizedBox(height: 18),
-          AppCard(
-            padding: 22,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${metric.name} · Rata-rata',
-                      style: TextStyle(
-                        color: AppColors.of(context).muted,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
+            const SizedBox(height: 18),
+            SizedBox(
+              height: 40,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  for (var i = 0; i < 5; i++)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 9),
+                      child: PillTab(
+                        label: const [
+                          'Baseline',
+                          'Gula Darah',
+                          'Tekanan Darah',
+                          'Berat Badan',
+                          'Kepatuhan Obat',
+                        ][i],
+                        selected: widget.progressIndex == i,
+                        onTap: () => widget.onProgress(i),
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      metric.averageText,
-                      style: TextStyle(
-                        color: AppColors.of(context).text,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 28,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: 170,
-                  child: _syncing && !hasChart
-                      ? Center(
-                          child: CircularProgressIndicator(
-                            color: color,
-                            strokeWidth: 2.5,
-                          ),
-                        )
-                      : hasChart
-                          ? TrendChart(color: color, values: values)
-                          : const ChartEmpty(),
-                ),
-                const SizedBox(height: 8),
-                if (hasChart)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            AppCard(
+              padding: 22,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        formatShortDate(metric.records.first.date),
-                        style: const TextStyle(
-                          color: Color(0xFF9AA9BB),
-                          fontSize: 10.5,
+                        '${metric.name} · Rata-rata',
+                        style: TextStyle(
+                          color: AppColors.of(context).muted,
                           fontWeight: FontWeight.w600,
+                          fontSize: 13,
                         ),
                       ),
+                      const SizedBox(height: 2),
                       Text(
-                        formatShortDate(metric.records.last.date),
-                        style: const TextStyle(
-                          color: Color(0xFF9AA9BB),
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w600,
+                        metric.averageText,
+                        style: TextStyle(
+                          color: AppColors.of(context).text,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 28,
                         ),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height: 170,
+                    child: _syncing && !hasChart
+                        ? Center(
+                            child: CircularProgressIndicator(
+                              color: color,
+                              strokeWidth: 2.5,
+                            ),
+                          )
+                        : hasChart
+                            ? TrendChart(color: color, values: values)
+                            : const ChartEmpty(),
+                  ),
+                  const SizedBox(height: 8),
+                  if (hasChart)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          formatShortDate(metric.records.first.date),
+                          style: const TextStyle(
+                            color: Color(0xFF9AA9BB),
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          formatShortDate(metric.records.last.date),
+                          style: const TextStyle(
+                            color: Color(0xFF9AA9BB),
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 13,
+              crossAxisSpacing: 13,
+              childAspectRatio: 1.7,
+              children: [
+                StatBox(
+                  label: 'Tertinggi',
+                  value: metric.highText,
+                  color: AppColors.pink,
+                ),
+                StatBox(
+                  label: 'Terendah',
+                  value: metric.lowText,
+                  color: AppColors.green,
+                ),
+                StatBox(
+                  label: 'Rata-rata',
+                  value: metric.averageText,
+                  color: AppColors.primary,
+                ),
+                StatBox(
+                  label: 'Tren',
+                  value: hasChart ? trend.label : '—',
+                  color: hasChart ? trend.color : AppColors.of(context).muted,
+                  icon: hasChart ? trend.icon : null,
+                ),
               ],
             ),
-          ),
-          const SizedBox(height: 14),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 13,
-            crossAxisSpacing: 13,
-            childAspectRatio: 1.9,
-            children: [
-              StatBox(
-                label: 'Tertinggi',
-                value: metric.highText,
-                color: AppColors.pink,
-              ),
-              StatBox(
-                label: 'Terendah',
-                value: metric.lowText,
-                color: AppColors.green,
-              ),
-              StatBox(
-                label: 'Rata-rata',
-                value: metric.averageText,
-                color: AppColors.primary,
-              ),
-              StatBox(
-                label: 'Tren',
-                value: hasChart ? trend.label : '—',
-                color: hasChart ? trend.color : AppColors.of(context).muted,
-                icon: hasChart ? trend.icon : null,
-              ),
-            ],
-          ),
-        ],
-      ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _syncHistory,
+      child: view,
     );
   }
 
@@ -368,11 +375,11 @@ class _ProgressScreenState extends State<ProgressScreen> {
                     padding: const EdgeInsets.only(right: 9),
                     child: PillTab(
                       label: const [
+                        'Baseline',
                         'Gula Darah',
                         'Tekanan Darah',
                         'Berat Badan',
                         'Kepatuhan Obat',
-                        'Baseline',
                       ][i],
                       selected: widget.progressIndex == i,
                       onTap: () => widget.onProgress(i),

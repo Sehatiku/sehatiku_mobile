@@ -44,6 +44,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _dashboard = DashboardService.instance.cachedDashboard;
+    _aiNarrative = DashboardService.instance.cachedAiSummary?.narrative;
     _loading = _dashboard == null;
     _fetch();
   }
@@ -58,12 +59,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
       setState(() => _error = null);
     }
     try {
-      final data = await DashboardService.instance.fetchDashboard();
+      // Trigger all API requests in parallel/concurrently
+      final dashboardFuture = DashboardService.instance.fetchDashboard();
+      final summaryFuture = DashboardService.instance.fetchAiSummary(7);
+      final notificationFuture = NotificationService.instance.fetchUnreadCount();
+      final statusFuture = RecordService.instance.fetchTodayStatus();
+      final historyFuture = RecordService.instance.fetchHistory(limit: 7);
+
+      // Await dashboard data
+      final data = await dashboardFuture;
       if (mounted) setState(() => _dashboard = data);
 
-      // Fetch AI summary narrative
+      // Await and update AI summary narrative
       try {
-        final summaryResponse = await DashboardService.instance.fetchAiSummary(7);
+        final summaryResponse = await summaryFuture;
         if (mounted) {
           setState(() {
             _aiNarrative = summaryResponse.narrative;
@@ -73,9 +82,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         debugPrint('Failed to fetch AI summary on dashboard: $summaryError');
       }
 
-      // Fetch unread notification count
+      // Await and update unread notification count
       try {
-        final count = await NotificationService.instance.fetchUnreadCount();
+        final count = await notificationFuture;
         if (mounted) {
           setState(() {
             _unreadCount = count;
@@ -85,9 +94,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         debugPrint('Failed to fetch unread notifications count: $unreadError');
       }
 
-      // Silent fetch of today-status to check for missing logs since yesterday
+      // Await and update today status
       try {
-        final status = await RecordService.instance.fetchTodayStatus();
+        final status = await statusFuture;
         if (mounted) {
           setState(() {
             _todayStatus = status;
@@ -106,9 +115,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         debugPrint('Failed to fetch today-status: $statusError');
       }
 
-      // Sync recent records for dashboard charts
+      // Await and merge recent history for charts
       try {
-        final entries = await RecordService.instance.fetchHistory(limit: 7);
+        final entries = await historyFuture;
         if (mounted) await HealthScope.of(context).mergeHistory(entries);
       } catch (_) {}
     } catch (e) {
@@ -274,8 +283,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final latest = store.latest;
     final today = store.today;
 
-    return AppScroll(
-      child: Column(
+    return RefreshIndicator(
+      onRefresh: _fetch,
+      child: AppScroll(
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Header ──────────────────────────────────────────────────────────
@@ -559,7 +570,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _EducationTeaser(onView: widget.onView),
         ],
       ),
-    );
+    ));
   }
 }
 

@@ -404,12 +404,14 @@ class EducationScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final filtered = _filtered(selectedFilter);
 
-    return DetailScaffold(
-      title: 'Edukasi Kesehatan',
-      onBack: onBack,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return RefreshIndicator(
+      onRefresh: () => Future<void>.delayed(const Duration(milliseconds: 500)),
+      child: DetailScaffold(
+        title: 'Edukasi Kesehatan',
+        onBack: onBack,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           // ── Filter chips ─────────────────────────────────────────────────
           SizedBox(
             height: 38,
@@ -590,6 +592,6 @@ class EducationScreen extends StatelessWidget {
               ),
         ],
       ),
-    );
+    ));
   }
 }

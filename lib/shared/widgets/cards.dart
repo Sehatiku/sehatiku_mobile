@@ -430,7 +430,7 @@ class StatBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     return AppCard(
-      padding: 17,
+      padding: 12,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,

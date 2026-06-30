@@ -65,8 +65,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     final String ageAndDisease = _buildSubtitle();
 
-    return AppScroll(
-      child: Column(
+    return RefreshIndicator(
+      onRefresh: _fetchIfPatient,
+      child: AppScroll(
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -282,7 +284,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
-    );
+    ));
   }
 
   String _buildSubtitle() {

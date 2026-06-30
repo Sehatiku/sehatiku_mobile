@@ -7,6 +7,7 @@ import 'package:sehatiku_mobile/data/models/health_score.dart';
 import 'package:sehatiku_mobile/data/repositories/health_store.dart';
 import 'package:sehatiku_mobile/data/services/api_client.dart';
 import 'package:sehatiku_mobile/data/services/record_service.dart';
+import 'package:sehatiku_mobile/data/services/dashboard_service.dart';
 import 'package:sehatiku_mobile/shared/widgets/widgets.dart';
 
 class RecordScreen extends StatefulWidget {
@@ -51,11 +52,54 @@ class _RecordScreenState extends State<RecordScreen> {
   int _currentTab = 0; // 0: Vital, 1: Aktivitas, 2: Kondisi
   late DateTime _selectedDate;
 
+  bool get _isLocked {
+    final record = HealthScope.of(context).recordFor(_selectedDate);
+    if (record == null) return false;
+
+    final profile = DashboardService.instance.cachedDashboard?.profile;
+    final disease = profile?.diseaseType ?? 'both';
+
+    bool vitalsFilled = true;
+    if (disease == 'diabetes' || disease == 'both') {
+      if (record.bloodSugar == null) vitalsFilled = false;
+    }
+    if (disease == 'hypertension' || disease == 'both') {
+      if (record.systolic == null || record.diastolic == null) vitalsFilled = false;
+    }
+
+    final sleepFilled = record.sleepHours != null;
+    final mealsFilled = record.meals.isNotEmpty;
+
+    return vitalsFilled && sleepFilled && mealsFilled;
+  }
+
+  Future<void> _syncTodayRecord() async {
+    final today = HealthRecord.dayOf(DateTime.now());
+    if (HealthRecord.dayOf(_selectedDate) != today) return;
+
+    try {
+      final loggedToday = await RecordService.instance.fetchLoggedToday();
+      if (loggedToday && mounted) {
+        final entries = await RecordService.instance.fetchHistory(limit: 5);
+        if (mounted) {
+          final store = HealthScope.of(context);
+          await store.mergeHistory(entries);
+          _loadRecordForDate(_selectedDate);
+        }
+      }
+    } catch (_) {
+      // Fail silently
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _selectedDate = widget.initialDate ?? DateTime.now();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadRecordForDate(_selectedDate));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadRecordForDate(_selectedDate);
+      _syncTodayRecord();
+    });
   }
 
   @override
@@ -66,6 +110,7 @@ class _RecordScreenState extends State<RecordScreen> {
         _selectedDate = widget.initialDate!;
       });
       _loadRecordForDate(widget.initialDate!);
+      _syncTodayRecord();
     }
   }
 
@@ -179,6 +224,31 @@ class _RecordScreenState extends State<RecordScreen> {
   void _save() async {
     if (_saving) return;
     FocusScope.of(context).unfocus();
+
+    final List<String> missingFields = [];
+    if (_bsController.text.trim().isEmpty) missingFields.add('Gula Darah');
+    if (_sysController.text.trim().isEmpty || _diaController.text.trim().isEmpty) {
+      missingFields.add('Tekanan Darah (Sistolik & Diastolik)');
+    }
+    if (_weightController.text.trim().isEmpty) missingFields.add('Berat Badan');
+    if (_mealsController.text.trim().isEmpty) missingFields.add('Makanan');
+    if (_sleepController.text.trim().isEmpty) missingFields.add('Jam Tidur');
+
+    if (_medicineTaken) {
+      if (_medicineNameController.text.trim().isEmpty) missingFields.add('Nama Obat');
+      if (_medicineTimeController.text.trim().isEmpty) missingFields.add('Waktu Konsumsi Obat');
+    }
+    if (_active30) {
+      if (_activityMinutesController.text.trim().isEmpty) missingFields.add('Durasi Aktivitas');
+      if (_selectedActivityType == 'Lainnya' && _customActivityController.text.trim().isEmpty) {
+        missingFields.add('Jenis Aktivitas');
+      }
+    }
+
+    if (missingFields.isNotEmpty) {
+      widget.onSaved('Harap lengkapi semua data berikut sebelum menyimpan: ${missingFields.join(", ")}');
+      return;
+    }
 
     final bs = _parseInt(_bsController);
     final sys = _parseInt(_sysController);
@@ -360,136 +430,120 @@ class _RecordScreenState extends State<RecordScreen> {
       _ => AppColors.lime,
     };
 
-    await showModalBottomSheet<void>(
+    await showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (ctx) {
         final c = AppColors.of(ctx);
-        return Container(
-          decoration: BoxDecoration(
-            color: c.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
           ),
-          padding: EdgeInsets.fromLTRB(
-            24,
-            20,
-            24,
-            MediaQuery.of(ctx).viewInsets.bottom + 40,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: c.line,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: scoreColor.withValues(alpha: .15),
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${score.healthScore.toInt()}',
-                          style: TextStyle(
-                            color: scoreColor,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                          ),
+          backgroundColor: c.surface,
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: scoreColor.withValues(alpha: .15),
+                          borderRadius: BorderRadius.circular(18),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Skor Kesehatan Anda',
-                            style: TextStyle(color: c.muted, fontSize: 12),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            score.statusLabel,
+                        child: Center(
+                          child: Text(
+                            '${score.healthScore.toInt()}',
                             style: TextStyle(
                               color: scoreColor,
                               fontSize: 22,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Skor Kesehatan Anda',
+                              style: TextStyle(color: c.muted, fontSize: 12),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              score.statusLabel,
+                              style: TextStyle(
+                                color: scoreColor,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    score.message,
+                    style: TextStyle(color: c.text, fontSize: 13.5, height: 1.5),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Faktor yang Perlu Diperhatikan',
+                    style: TextStyle(
+                      color: c.text,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ...score.topPenalties.map(
+                    (penalty) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.warning_amber_rounded,
+                              color: scoreColor, size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              penalty,
+                              style: TextStyle(
+                                color: c.text,
+                                fontSize: 13,
+                                height: 1.45,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  score.message,
-                  style: TextStyle(color: c.text, fontSize: 13.5, height: 1.5),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  'Faktor yang Perlu Diperhatikan',
-                  style: TextStyle(
-                    color: c.text,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14,
                   ),
-                ),
-                const SizedBox(height: 10),
-                ...score.topPenalties.map(
-                  (penalty) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.warning_amber_rounded,
-                            color: scoreColor, size: 16),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            penalty,
-                            style: TextStyle(
-                              color: c.text,
-                              fontSize: 13,
-                              height: 1.45,
-                            ),
-                          ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: FilledButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: FilledButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
                       ),
+                      child: const Text('Mengerti'),
                     ),
-                    child: const Text('Mengerti'),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -711,7 +765,7 @@ class _RecordScreenState extends State<RecordScreen> {
     return Row(
       children: [
         GestureDetector(
-          onTap: () => adjust(-step),
+          onTap: _isLocked ? null : () => adjust(-step),
           child: Container(
             width: 44,
             height: 44,
@@ -726,6 +780,7 @@ class _RecordScreenState extends State<RecordScreen> {
         const SizedBox(width: 8),
         Expanded(
           child: TextField(
+            enabled: !_isLocked,
             controller: controller,
             keyboardType: TextInputType.numberWithOptions(decimal: isDecimal),
             inputFormatters: [
@@ -776,7 +831,7 @@ class _RecordScreenState extends State<RecordScreen> {
         ),
         const SizedBox(width: 8),
         GestureDetector(
-          onTap: () => adjust(step),
+          onTap: _isLocked ? null : () => adjust(step),
           child: Container(
             width: 44,
             height: 44,
@@ -835,7 +890,7 @@ class _RecordScreenState extends State<RecordScreen> {
           Row(
             children: [
               GestureDetector(
-                onTap: () => adjust(-step),
+                onTap: _isLocked ? null : () => adjust(-step),
                 child: Container(
                   width: 38,
                   height: 38,
@@ -850,6 +905,7 @@ class _RecordScreenState extends State<RecordScreen> {
               const SizedBox(width: 6),
               Expanded(
                 child: TextField(
+                  enabled: !_isLocked,
                   controller: controller,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -890,7 +946,7 @@ class _RecordScreenState extends State<RecordScreen> {
               ),
               const SizedBox(width: 6),
               GestureDetector(
-                onTap: () => adjust(step),
+                onTap: _isLocked ? null : () => adjust(step),
                 child: Container(
                   width: 38,
                   height: 38,
@@ -956,6 +1012,7 @@ class _RecordScreenState extends State<RecordScreen> {
         ),
         const SizedBox(height: 6),
         TextField(
+          enabled: !_isLocked,
           controller: controller,
           keyboardType: keyboardType,
           inputFormatters: inputFormatters,
@@ -993,7 +1050,7 @@ class _RecordScreenState extends State<RecordScreen> {
             ),
             suffixIcon: suffixIcon != null
                 ? GestureDetector(
-                    onTap: onTapSuffix,
+                    onTap: _isLocked ? null : onTapSuffix,
                     child: Icon(suffixIcon, size: 18, color: colors.muted),
                   )
                 : null,
@@ -1046,7 +1103,7 @@ class _RecordScreenState extends State<RecordScreen> {
         children: [
           GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: () {
+            onTap: _isLocked ? null : () {
               setState(() {
                 _medicineTaken = !_medicineTaken;
                 if (_medicineTaken) {
@@ -1207,7 +1264,7 @@ class _RecordScreenState extends State<RecordScreen> {
         children: [
           GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: () {
+            onTap: _isLocked ? null : () {
               setState(() {
                 _active30 = !_active30;
                 if (_active30) {
@@ -1295,7 +1352,7 @@ class _RecordScreenState extends State<RecordScreen> {
                 final isSel = _selectedActivityType == type;
                 return InkWell(
                   borderRadius: BorderRadius.circular(12),
-                  onTap: () {
+                  onTap: _isLocked ? null : () {
                     setState(() {
                       _selectedActivityType = type;
                     });
@@ -1366,7 +1423,7 @@ class _RecordScreenState extends State<RecordScreen> {
 
         return Expanded(
           child: GestureDetector(
-            onTap: () => setState(() => _stressIndex = idx),
+            onTap: _isLocked ? null : () => setState(() => _stressIndex = idx),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -1444,7 +1501,7 @@ class _RecordScreenState extends State<RecordScreen> {
             children: [
               Expanded(
                 child: GestureDetector(
-                  onTap: () => onChanged(false),
+                  onTap: _isLocked ? null : () => onChanged(false),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.symmetric(vertical: 10),
@@ -1471,7 +1528,7 @@ class _RecordScreenState extends State<RecordScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: GestureDetector(
-                  onTap: () => onChanged(true),
+                  onTap: _isLocked ? null : () => onChanged(true),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.symmetric(vertical: 10),
@@ -1578,6 +1635,7 @@ class _RecordScreenState extends State<RecordScreen> {
                 ),
                 const SizedBox(height: 10),
                 TextField(
+                  enabled: !_isLocked,
                   controller: _mealsController,
                   maxLines: 3,
                   maxLength: 500,
@@ -1643,7 +1701,8 @@ class _RecordScreenState extends State<RecordScreen> {
                 SegmentedPills(
                   labels: const ['🥱 Buruk', '😌 Cukup', '💤 Nyenyak'],
                   selected: _sleepQuality,
-                  onTap: (v) => setState(() => _sleepQuality = v),
+                  onTap: _isLocked ? (_) {} : (v) => setState(() => _sleepQuality = v),
+                  enabledIndices: _isLocked ? [] : null,
                 ),
               ],
             ),
@@ -1694,6 +1753,7 @@ class _RecordScreenState extends State<RecordScreen> {
                   ),
                   const SizedBox(height: 12),
                   TextField(
+                    enabled: !_isLocked,
                     controller: _noteController,
                     minLines: 3,
                     maxLines: 5,
@@ -1808,9 +1868,9 @@ class _RecordScreenState extends State<RecordScreen> {
                   ),
                 )
               : PrimaryButton(
-                  label: 'Simpan Data',
-                  icon: Icons.save_rounded,
-                  onPressed: _save,
+                  label: _isLocked ? 'Sudah Diisi Lengkap' : 'Simpan Data',
+                  icon: _isLocked ? Icons.lock_rounded : Icons.save_rounded,
+                  onPressed: _isLocked ? null : _save,
                 ),
         ),
       ],
@@ -1834,6 +1894,7 @@ class _RecordScreenState extends State<RecordScreen> {
             if (_selectedDate != today) {
               setState(() => _selectedDate = today);
               _loadRecordForDate(today);
+              _syncTodayRecord();
             }
           },
           colors: colors,
@@ -1890,13 +1951,43 @@ class _RecordScreenState extends State<RecordScreen> {
           const SizedBox(height: 16),
           _buildHeaderCard(),
           const SizedBox(height: 16),
-          _buildTabSelector(colors),
+           _buildTabSelector(colors),
           const SizedBox(height: 16),
+          if (_isLocked) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: colors.elevated,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: colors.line),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.lock_rounded, color: AppColors.primary, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Catatan hari ini sudah lengkap dan terkunci.',
+                      style: TextStyle(
+                        color: colors.text,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 250),
             switchInCurve: Curves.easeIn,
             switchOutCurve: Curves.easeOut,
-            child: _buildActiveTabContent(colors),
+            child: IgnorePointer(
+              ignoring: _isLocked,
+              child: _buildActiveTabContent(colors),
+            ),
           ),
           const SizedBox(height: 20),
           _buildNavigationButtons(colors),

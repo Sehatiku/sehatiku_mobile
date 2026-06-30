@@ -64,26 +64,36 @@ class PrimaryButton extends StatelessWidget {
 
   final String label;
   final IconData icon;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    final isEnabled = onPressed != null;
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.primary, Color(0xFF2A8FE0)],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: .38),
-            blurRadius: 22,
-            offset: const Offset(0, 12),
-            spreadRadius: -4,
-          ),
-        ],
+        gradient: isEnabled
+            ? const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.primary, Color(0xFF2A8FE0)],
+              )
+            : LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [colors.muted.withValues(alpha: 0.3), colors.muted.withValues(alpha: 0.3)],
+              ),
+        boxShadow: isEnabled
+            ? [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: .38),
+                  blurRadius: 22,
+                  offset: const Offset(0, 12),
+                  spreadRadius: -4,
+                ),
+              ]
+            : null,
       ),
       child: Material(
         color: Colors.transparent,
@@ -96,12 +106,12 @@ class PrimaryButton extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, color: Colors.white, size: 21),
+                Icon(icon, color: isEnabled ? Colors.white : colors.text.withValues(alpha: 0.5), size: 21),
                 const SizedBox(width: 10),
                 Text(
                   label,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: isEnabled ? Colors.white : colors.text.withValues(alpha: 0.5),
                     fontWeight: FontWeight.w800,
                     fontSize: 16,
                   ),
