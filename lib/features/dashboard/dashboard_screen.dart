@@ -38,6 +38,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String? _error;
   PatientTodayStatus? _todayStatus;
   int _unreadCount = 0;
+  String? _aiNarrative;
 
   @override
   void initState() {
@@ -59,6 +60,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       final data = await DashboardService.instance.fetchDashboard();
       if (mounted) setState(() => _dashboard = data);
+
+      // Fetch AI summary narrative
+      try {
+        final summaryResponse = await DashboardService.instance.fetchAiSummary(7);
+        if (mounted) {
+          setState(() {
+            _aiNarrative = summaryResponse.narrative;
+          });
+        }
+      } catch (summaryError) {
+        debugPrint('Failed to fetch AI summary on dashboard: $summaryError');
+      }
 
       // Fetch unread notification count
       try {
@@ -260,16 +273,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final latest = store.latest;
     final today = store.today;
-    final recentRecords = store.recent(7);
-    final bsRecords = recentRecords.where((r) => r.bloodSugar != null).toList();
-    final bsValues = bsRecords.map((r) => r.bloodSugar!.toDouble()).toList();
-    final bsTrend = trendInfo(bsValues, lowerIsBetter: true);
-    final bpRecords = recentRecords.where((r) => r.systolic != null).toList();
-    final bpValues = bpRecords.map((r) => r.systolic!.toDouble()).toList();
-    final bpTrend = trendInfo(bpValues, lowerIsBetter: true);
-    final diseaseType = _dashboard?.profile.diseaseType;
-    final showBS = diseaseType != 'hypertension';
-    final showBP = diseaseType == 'hypertension' || diseaseType == 'both';
 
     return AppScroll(
       child: Column(
@@ -353,9 +356,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (_loading)
             const _LoadingCard()
           else if (_dashboard != null && _dashboard!.risk.scoredAt != null)
-            _ApiRiskCard(dashboard: _dashboard!)
+            InkWell(
+              onTap: () => widget.onView(MainView.ai),
+              borderRadius: BorderRadius.circular(28),
+              child: _ApiRiskCard(dashboard: _dashboard!),
+            )
           else
-            HealthScoreCard(record: latest),
+            InkWell(
+              onTap: () => widget.onView(MainView.ai),
+              borderRadius: BorderRadius.circular(28),
+              child: HealthScoreCard(record: latest),
+            ),
           const SizedBox(height: 20),
 
           // ── Aksi Cepat (Quick Actions) ───────────────────────────────────────
@@ -430,25 +441,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ],
 
-          // ── Streak & logging (from API) ──────────────────────────────────────
-          if (_dashboard != null) ...[
-            const SizedBox(height: 14),
-            _StreakCard(
-              logging: _dashboard!.logging,
-              loggedTodayOverride: _todayStatus?.loggedToday,
-            ),
-          ],
+          // ── Streak & logging (calculated from local + merged records) ────────
+          () {
+            final store = HealthScope.of(context);
+            final sortedRecords = store.records;
+            
+            final Set<DateTime> recordDates = sortedRecords
+                .map((r) => DateTime(r.date.year, r.date.month, r.date.day))
+                .toSet();
+
+            final now = DateTime.now();
+            final todayMidnight = DateTime(now.year, now.month, now.day);
+            final yesterdayMidnight = todayMidnight.subtract(const Duration(days: 1));
+            
+            final bool loggedToday = recordDates.contains(todayMidnight);
+            final bool loggedYesterday = recordDates.contains(yesterdayMidnight);
+
+            int streakDays = 0;
+            if (loggedToday || loggedYesterday) {
+              DateTime currentDay = loggedToday ? todayMidnight : yesterdayMidnight;
+              while (recordDates.contains(currentDay)) {
+                streakDays++;
+                currentDay = currentDay.subtract(const Duration(days: 1));
+              }
+            }
+
+            return Column(
+              children: [
+                const SizedBox(height: 14),
+                _StreakCard(
+                  streakDays: streakDays,
+                  recordDates: recordDates,
+                  loggedToday: loggedToday,
+                ),
+              ],
+            );
+          }(),
           const SizedBox(height: 28),
-
-          // ── Motivasi Hari Ini ────────────────────────────────────────────────
-          const SectionTitle(title: 'Motivasi Hari Ini'),
-          const SizedBox(height: 13),
-          const _MotivationCard(),
-          const SizedBox(height: 24),
-
-          // ── Education teaser ─────────────────────────────────────────────────
-          _EducationTeaser(onView: widget.onView),
-          const SizedBox(height: 26),
 
           // ── AI insight banner ────────────────────────────────────────────────
           InkWell(
@@ -487,12 +516,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    _dashboard != null && _dashboard!.recommendations.isNotEmpty
-                        ? '"${_dashboard!.recommendations.first}"'
-                        : '"Kondisi Anda stabil. Pertahankan pola makan rendah garam hari ini."',
+                    _aiNarrative != null
+                        ? '"$_aiNarrative"'
+                        : (_dashboard != null && _dashboard!.recommendations.isNotEmpty
+                            ? '"${_dashboard!.recommendations.first}"'
+                            : '"Kondisi Anda stabil. Pertahankan pola makan rendah garam hari ini."'),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 16,
+                      fontSize: 14.5,
                       fontWeight: FontWeight.w700,
                       height: 1.5,
                     ),
@@ -514,26 +547,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 28),
 
-          // ── Health trend charts ──────────────────────────────────────────────
-          if (showBS)
-            _MetricChartCard(
-              label: 'Gula Darah',
-              values: bsValues,
-              records: bsRecords,
-              trend: bsTrend,
-              color: AppColors.primary,
-            ),
-          if (showBS && showBP) const SizedBox(height: 12),
-          if (showBP)
-            _MetricChartCard(
-              label: 'Tekanan Darah (Sistolik)',
-              values: bpValues,
-              records: bpRecords,
-              trend: bpTrend,
-              color: AppColors.pink,
-            ),
+          // ── Motivasi Hari Ini ────────────────────────────────────────────────
+          const SectionTitle(title: 'Motivasi Hari Ini'),
+          const SizedBox(height: 13),
+          const _MotivationCard(),
+          const SizedBox(height: 24),
+
+          // ── Education teaser ─────────────────────────────────────────────────
+          _EducationTeaser(onView: widget.onView),
         ],
       ),
     );
@@ -1234,7 +1257,7 @@ class _ApiRiskCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Risiko AI Terkini',
+                const Text('Health Score AI',
                     style: TextStyle(
                         color: Color(0xD9FFFFFF),
                         fontWeight: FontWeight.w600,
@@ -1258,7 +1281,9 @@ class _ApiRiskCard extends StatelessWidget {
                         Text(statusEmoji, style: const TextStyle(fontSize: 13)),
                         const SizedBox(width: 7),
                         Text(
-                          '${risk.riskLabel[0].toUpperCase()}${risk.riskLabel.substring(1)} · ${risk.status}',
+                          risk.status == 'bahaya'
+                              ? 'Bahaya'
+                              : (risk.status == 'waswas' ? 'Waswas' : 'Aman'),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w800,
@@ -1435,17 +1460,21 @@ class _MeasurementGrid extends StatelessWidget {
 
 /// Streak & logging status card with 7-day week view.
 class _StreakCard extends StatelessWidget {
-  const _StreakCard({required this.logging, this.loggedTodayOverride});
+  const _StreakCard({
+    required this.streakDays,
+    required this.recordDates,
+    required this.loggedToday,
+  });
 
-  final DashboardLogging logging;
-  final bool? loggedTodayOverride;
+  final int streakDays;
+  final Set<DateTime> recordDates;
+  final bool loggedToday;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final loggedToday = loggedTodayOverride ?? logging.loggedToday;
     final Color streakColor =
-        logging.streakDays >= 7 ? AppColors.lime : AppColors.amber;
+        streakDays >= 7 ? AppColors.lime : AppColors.amber;
     final now = DateTime.now();
 
     return AppCard(
@@ -1482,8 +1511,8 @@ class _StreakCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      logging.streakDays > 0
-                          ? '🔥 Streak ${logging.streakDays} hari berturut-turut'
+                      streakDays > 0
+                          ? '🔥 Streak $streakDays hari berturut-turut'
                           : 'Mulai streak hari ini!',
                       style: TextStyle(color: colors.muted, fontSize: 12.5),
                     ),
@@ -1499,10 +1528,9 @@ class _StreakCard extends StatelessWidget {
             children: List.generate(7, (i) {
               final daysAgo = 6 - i;
               final day = now.subtract(Duration(days: daysAgo));
+              final dayMidnight = DateTime(day.year, day.month, day.day);
               final label = _shortDay(day.weekday);
-              final isFilled = loggedToday
-                  ? daysAgo < logging.streakDays
-                  : (daysAgo > 0 && daysAgo <= logging.streakDays);
+              final isFilled = recordDates.contains(dayMidnight);
               final isToday = daysAgo == 0;
               return _DayDot(
                 label: label,
@@ -2113,81 +2141,3 @@ class _MissedLogsBanner extends StatelessWidget {
   }
 }
 
-class _MetricChartCard extends StatelessWidget {
-  const _MetricChartCard({
-    required this.label,
-    required this.values,
-    required this.records,
-    required this.trend,
-    required this.color,
-  });
-
-  final String label;
-  final List<double> values;
-  final List<HealthRecord> records;
-  final TrendInfo trend;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  '$label · ${values.length} catatan',
-                  style: TextStyle(
-                    color: colors.text,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14.5,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(trend.icon, color: trend.color, size: 15),
-                  const SizedBox(width: 3),
-                  Text(
-                    trend.label,
-                    style: TextStyle(
-                        color: trend.color,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 96,
-            child: values.length < 2
-                ? const ChartEmpty()
-                : TrendChart(color: color, values: values),
-          ),
-          const SizedBox(height: 6),
-          if (values.length >= 2)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: records
-                  .map((r) => Text(
-                        dayName(r.date).substring(0, 3),
-                        style: TextStyle(
-                            color: colors.muted,
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w600),
-                      ))
-                  .toList(),
-            ),
-        ],
-      ),
-    );
-  }
-}

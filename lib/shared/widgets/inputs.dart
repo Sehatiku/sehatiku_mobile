@@ -211,11 +211,13 @@ class SegmentedPills extends StatelessWidget {
     required this.labels,
     required this.selected,
     required this.onTap,
+    this.enabledIndices,
   });
 
   final List<String> labels;
   final int selected;
   final ValueChanged<int> onTap;
+  final List<int>? enabledIndices;
 
   @override
   Widget build(BuildContext context) {
@@ -262,10 +264,11 @@ class SegmentedPills extends StatelessWidget {
           Row(
             children: List.generate(n, (index) {
               final isSelected = selected == index;
+              final isEnabled = enabledIndices == null || enabledIndices!.contains(index);
               return Expanded(
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => onTap(index),
+                  onTap: isEnabled ? () => onTap(index) : null,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       vertical: 11,
@@ -276,7 +279,9 @@ class SegmentedPills extends StatelessWidget {
                       duration: const Duration(milliseconds: 260),
                       curve: Curves.easeOut,
                       style: TextStyle(
-                        color: isSelected ? Colors.white : c.muted,
+                        color: isSelected
+                            ? Colors.white
+                            : (isEnabled ? c.muted : c.muted.withValues(alpha: 0.35)),
                         fontWeight: FontWeight.w800,
                         fontSize: 13,
                       ),

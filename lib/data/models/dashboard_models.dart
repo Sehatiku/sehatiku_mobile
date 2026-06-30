@@ -57,7 +57,10 @@ class DashboardRisk {
     required this.score,
     required this.riskLabel,
     required this.status,
+    required this.statusLabel,
     required this.mainFactor,
+    required this.topPenalties,
+    this.message,
     this.scoredAt,
   });
 
@@ -69,8 +72,17 @@ class DashboardRisk {
   /// 'bahaya' | 'waswas' | 'aman'
   final String status;
 
+  /// Display label: 'Sehat' | 'Waswas' | 'Parah'
+  final String statusLabel;
+
   /// Indonesian label for top SHAP factor, empty if no score yet.
   final String mainFactor;
+
+  /// Ready-to-display Indonesian penalty strings — show as-is, no post-processing.
+  final List<String> topPenalties;
+
+  /// Ready-to-display Indonesian message from the ML model.
+  final String? message;
 
   /// ISO 8601 — null if no score yet.
   final String? scoredAt;
@@ -79,7 +91,13 @@ class DashboardRisk {
         score: json['score'] as int,
         riskLabel: json['risk_label'] as String,
         status: json['status'] as String,
+        statusLabel: json['status_label'] as String? ?? '',
         mainFactor: json['main_factor'] as String? ?? '',
+        topPenalties: (json['top_penalties'] as List<dynamic>?)
+                ?.map((e) => e as String)
+                .toList() ??
+            [],
+        message: json['message'] as String?,
         scoredAt: json['scored_at'] as String?,
       );
 }

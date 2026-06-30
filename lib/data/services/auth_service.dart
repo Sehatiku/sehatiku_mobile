@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:sehatiku_mobile/data/models/auth_models.dart';
 import 'package:sehatiku_mobile/data/repositories/auth_store.dart';
 import 'package:sehatiku_mobile/data/services/api_client.dart';
+import 'package:sehatiku_mobile/data/services/record_service.dart';
 
 /// Wraps all auth-related API calls for both patient and nakes actors.
 class AuthService {
@@ -95,6 +96,7 @@ class AuthService {
         // Fire-and-forget: server error does not block local logout.
       }
     }
+    RecordService.instance.clearCache();
     await AuthStore.instance.clear();
   }
 }

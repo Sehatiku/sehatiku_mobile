@@ -254,6 +254,13 @@ class _RecordScreenState extends State<RecordScreen> {
     if (hasRecordMetric) {
       try {
         score = await RecordService.instance.saveRecord(record);
+        if (score != null) {
+          await store.upsert(record.copyWith(
+            healthScore: score.healthScore.toInt(),
+            apiStatus: score.status,
+            apiStatusLabel: score.statusLabel,
+          ));
+        }
         store.clearPendingSync(record.date);
       } catch (err) {
         if (err is ApiException && err.statusCode == 400) {

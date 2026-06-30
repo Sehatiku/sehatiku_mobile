@@ -7,6 +7,9 @@ import 'package:sehatiku_mobile/core/theme/app_colors.dart';
 class HealthRecord {
   HealthRecord({
     required this.date,
+    this.healthScore,
+    this.apiStatus,
+    this.apiStatusLabel,
     // Physiological
     this.bloodSugar,
     this.bloodSugarTag = '',
@@ -32,6 +35,11 @@ class HealthRecord {
 
   /// Always normalised to midnight so one record maps to one calendar day.
   final DateTime date;
+
+  /// Custom precomputed score and status from API/DB.
+  final int? healthScore;
+  final String? apiStatus;
+  final String? apiStatusLabel;
 
   // --- Physiological ---
   final int? bloodSugar;
@@ -76,6 +84,7 @@ class HealthRecord {
   /// Transparent rule-based wellness score (0-100). This is a heuristic for the
   /// demo, not a medical diagnosis.
   int get score {
+    if (healthScore != null) return healthScore!;
     var s = 100.0;
 
     final bs = bloodSugar;
@@ -135,6 +144,14 @@ class HealthRecord {
   int get riskPercent => ((100 - score) * 0.6).round().clamp(0, 100);
 
   String get statusLabel {
+    if (apiStatusLabel != null && apiStatusLabel!.isNotEmpty) {
+      final val = apiStatusLabel!;
+      return '${val[0].toUpperCase()}${val.substring(1)}';
+    }
+    if (apiStatus != null && apiStatus!.isNotEmpty) {
+      final val = apiStatus!;
+      return '${val[0].toUpperCase()}${val.substring(1)}';
+    }
     final sc = score;
     if (sc >= 80) return 'Aman';
     if (sc >= 60) return 'Perhatian';
@@ -142,6 +159,13 @@ class HealthRecord {
   }
 
   Color get statusColor {
+    if (apiStatus != null && apiStatus!.isNotEmpty) {
+      return switch (apiStatus) {
+        'bahaya' => AppColors.red,
+        'waswas' => AppColors.amber,
+        _ => AppColors.lime,
+      };
+    }
     final sc = score;
     if (sc >= 80) return AppColors.lime;
     if (sc >= 60) return AppColors.amber;
@@ -149,6 +173,13 @@ class HealthRecord {
   }
 
   Color get statusBg {
+    if (apiStatus != null && apiStatus!.isNotEmpty) {
+      return switch (apiStatus) {
+        'bahaya' => const Color(0xFFFFEEF0),
+        'waswas' => const Color(0xFFFFF8E6),
+        _ => const Color(0xFFE7F7EC),
+      };
+    }
     final sc = score;
     if (sc >= 80) return const Color(0xFFE7F7EC);
     if (sc >= 60) return const Color(0xFFFFF8E6);
@@ -159,6 +190,9 @@ class HealthRecord {
       (systolic != null && diastolic != null) ? '$systolic/$diastolic' : '—';
 
   HealthRecord copyWith({
+    int? healthScore,
+    String? apiStatus,
+    String? apiStatusLabel,
     int? bloodSugar,
     String? bloodSugarTag,
     int? systolic,
@@ -181,6 +215,9 @@ class HealthRecord {
   }) {
     return HealthRecord(
       date: date,
+      healthScore: healthScore ?? this.healthScore,
+      apiStatus: apiStatus ?? this.apiStatus,
+      apiStatusLabel: apiStatusLabel ?? this.apiStatusLabel,
       bloodSugar: bloodSugar ?? this.bloodSugar,
       bloodSugarTag: bloodSugarTag ?? this.bloodSugarTag,
       systolic: systolic ?? this.systolic,
@@ -205,6 +242,9 @@ class HealthRecord {
 
   Map<String, dynamic> toJson() => {
     'date': date.toIso8601String(),
+    'healthScore': healthScore,
+    'apiStatus': apiStatus,
+    'apiStatusLabel': apiStatusLabel,
     'bloodSugar': bloodSugar,
     'bloodSugarTag': bloodSugarTag,
     'systolic': systolic,
@@ -229,6 +269,9 @@ class HealthRecord {
   factory HealthRecord.fromJson(Map<String, dynamic> json) {
     return HealthRecord(
       date: dayOf(DateTime.parse(json['date'] as String)),
+      healthScore: json['healthScore'] as int?,
+      apiStatus: json['apiStatus'] as String?,
+      apiStatusLabel: json['apiStatusLabel'] as String?,
       bloodSugar: json['bloodSugar'] as int?,
       bloodSugarTag: json['bloodSugarTag'] as String? ?? '',
       systolic: json['systolic'] as int?,
