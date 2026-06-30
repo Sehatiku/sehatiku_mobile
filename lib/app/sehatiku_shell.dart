@@ -6,6 +6,7 @@ import 'package:sehatiku_mobile/core/core.dart';
 import 'package:sehatiku_mobile/data/models/auth_models.dart';
 import 'package:sehatiku_mobile/data/repositories/health_store.dart';
 import 'package:sehatiku_mobile/data/services/auth_service.dart';
+import 'package:sehatiku_mobile/data/services/dashboard_service.dart';
 import 'package:sehatiku_mobile/features/auth/login_screen.dart';
 import 'package:sehatiku_mobile/features/dashboard/dashboard_screen.dart';
 import 'package:sehatiku_mobile/features/home/app_home.dart';
@@ -36,6 +37,7 @@ class _SehatikuShellState extends State<SehatikuShell> {
   Session? _session;
 
   MainView _view = MainView.beranda;
+  MainView? _previousView;
   DateTime? _recordInitialDate;
   int _onboardingIndex = 0;
   int _progressIndex = 0;
@@ -107,6 +109,7 @@ class _SehatikuShellState extends State<SehatikuShell> {
 
   Future<void> _onLogout() async {
     await HealthScope.of(context).clear();
+    DashboardService.instance.clearCache();
     await AuthService.instance.logout();
     DashboardScreen.hasShownMissingLogsThisSession = false;
     if (!mounted) return;
@@ -143,13 +146,17 @@ class _SehatikuShellState extends State<SehatikuShell> {
           Stage.app => AppHome(
             session: _session,
             view: _view,
+            previousView: _previousView,
             progressIndex: _progressIndex,
             rangeIndex: _rangeIndex,
             forecastIndex: _forecastIndex,
             educationFilter: _educationFilter,
             darkMode: widget.darkMode,
             recordDate: _recordInitialDate,
-            onView: (view) => setState(() {
+             onView: (view) => setState(() {
+              if (_view != view) {
+                _previousView = _view;
+              }
               _view = view;
               if (view != MainView.catatan) {
                 _recordInitialDate = null;

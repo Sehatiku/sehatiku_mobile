@@ -152,9 +152,12 @@ class _DoctorScreenState extends State<DoctorScreen> {
                 FilledButton.icon(
                   onPressed: () async {
                     final uri = Uri.parse('https://wa.me/628975228858');
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
-                    } else {
+                    try {
+                      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      if (!launched) {
+                        widget.onAction('Tidak dapat membuka WhatsApp. Pastikan WhatsApp terinstal.');
+                      }
+                    } catch (_) {
                       widget.onAction('Tidak dapat membuka WhatsApp. Pastikan WhatsApp terinstal.');
                     }
                   },
@@ -363,9 +366,12 @@ class _DoctorScreenState extends State<DoctorScreen> {
                         }
 
                         final uri = Uri.parse(urlString);
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
-                        } else {
+                        try {
+                          final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          if (!launched) {
+                            widget.onAction('Tidak dapat membuka WhatsApp. Pastikan WhatsApp terinstal.');
+                          }
+                        } catch (_) {
                           widget.onAction('Tidak dapat membuka WhatsApp. Pastikan WhatsApp terinstal.');
                         }
                       },
@@ -487,10 +493,13 @@ class _DoctorScreenState extends State<DoctorScreen> {
       );
     }
 
-    return DetailScaffold(
-      title: 'Konsultasi Dokter',
-      onBack: widget.onBack,
-      child: content,
+    return RefreshIndicator(
+      onRefresh: _fetchDoctorAndHistory,
+      child: DetailScaffold(
+        title: 'Konsultasi Dokter',
+        onBack: widget.onBack,
+        child: content,
+      ),
     );
   }
 

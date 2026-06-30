@@ -20,8 +20,15 @@ class DashboardService {
   static final DashboardService instance = DashboardService._();
 
   PatientDashboard? _cachedDashboard;
+  AiSummaryResponse? _cachedAiSummary;
 
   PatientDashboard? get cachedDashboard => _cachedDashboard;
+  AiSummaryResponse? get cachedAiSummary => _cachedAiSummary;
+
+  void clearCache() {
+    _cachedDashboard = null;
+    _cachedAiSummary = null;
+  }
 
   /// GET /api/v1/patients/dashboard
   Future<PatientDashboard> fetchDashboard() async {
@@ -56,16 +63,20 @@ class DashboardService {
 
       final bool available = data['available'] as bool? ?? false;
       if (!available) {
-        return AiSummaryResponse(
+        final summary = AiSummaryResponse(
           narrative: 'Penjelasan AI belum tersedia untuk periode $days hari terakhir. Silakan catat data kesehatan Anda secara rutin.',
           availableWindows: availableWindows,
         );
+        _cachedAiSummary = summary;
+        return summary;
       }
       
-      return AiSummaryResponse(
+      final summary = AiSummaryResponse(
         narrative: data['narrative'] as String? ?? 'Penjelasan AI tidak tersedia.',
         availableWindows: availableWindows,
       );
+      _cachedAiSummary = summary;
+      return summary;
     } on DioException catch (e) {
       throw apiExceptionFrom(e);
     }

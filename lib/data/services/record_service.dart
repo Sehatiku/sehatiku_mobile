@@ -36,6 +36,19 @@ class RecordService {
     }
   }
 
+  /// GET /api/v1/patients/records/logged-today
+  ///
+  /// Throws [ApiException] on failure.
+  Future<bool> fetchLoggedToday() async {
+    try {
+      final resp = await ApiClient.instance.get('/api/v1/patients/records/logged-today');
+      final data = resp.data['data'];
+      return data == true;
+    } on DioException catch (e) {
+      throw apiExceptionFrom(e);
+    }
+  }
+
   /// Returns noon UTC for the given calendar date so the date is unambiguous
   /// across all time-zones.
   ///

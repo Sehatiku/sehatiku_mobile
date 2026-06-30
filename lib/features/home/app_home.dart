@@ -18,6 +18,7 @@ class AppHome extends StatelessWidget {
     super.key,
     this.session,
     required this.view,
+    this.previousView,
     required this.progressIndex,
     required this.rangeIndex,
     required this.forecastIndex,
@@ -38,6 +39,7 @@ class AppHome extends StatelessWidget {
   /// The active session — null only in edge-cases before auth is resolved.
   final Session? session;
   final MainView view;
+  final MainView? previousView;
   final int progressIndex;
   final int rangeIndex;
   final int forecastIndex;
@@ -107,7 +109,13 @@ class AppHome extends StatelessWidget {
                 fullName: session?.fullName,
               ),
               MainView.dokter => DoctorScreen(
-                onBack: () => onView(MainView.beranda),
+                onBack: () {
+                  if (previousView == MainView.profil || previousView == MainView.beranda) {
+                    onView(previousView!);
+                  } else {
+                    onView(MainView.beranda);
+                  }
+                },
                 onAction: onAction,
               ),
               MainView.riwayat => HistoryScreen(
