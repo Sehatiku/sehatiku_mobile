@@ -15,6 +15,14 @@ class RecordService {
   /// ML inference can take up to 60 s on cold start; give 90 s headroom.
   static const _kScoreTimeout = Duration(seconds: 90);
 
+  HealthScore? _cachedScore;
+
+  HealthScore? get cachedScore => _cachedScore;
+
+  void clearCache() {
+    _cachedScore = null;
+  }
+
   /// GET /api/v1/patients/records/today-status
   ///
   /// Throws [ApiException] on failure.
@@ -68,7 +76,9 @@ class RecordService {
       if (raw is! Map) return null;
       final scoreMap = raw['score'];
       if (scoreMap is! Map) return null;
-      return HealthScore.fromJson(Map<String, dynamic>.from(scoreMap));
+      final score = HealthScore.fromJson(Map<String, dynamic>.from(scoreMap));
+      _cachedScore = score;
+      return score;
     } on DioException catch (e) {
       throw apiExceptionFrom(e);
     }
@@ -79,15 +89,20 @@ class RecordService {
   /// Re-computes the score on demand (e.g. after submitting sleep/activity via
   /// [submitHealthLog], or from a "Hitung Ulang" button).
   /// Throws [ApiException] with statusCode 422 if no clinical baseline exists.
-  Future<HealthScore> fetchHealthScore() async {
+  Future<HealthScore> fetchHealthScore({bool forceRefresh = false}) async {
+    if (_cachedScore != null && !forceRefresh) {
+      return _cachedScore!;
+    }
     try {
       final resp = await ApiClient.instance.get(
         '/api/v1/patients/health-score',
         options: Options(receiveTimeout: _kScoreTimeout),
       );
       final raw = resp.data['data'];
-      return HealthScore.fromJson(
+      final score = HealthScore.fromJson(
           raw is Map<String, dynamic> ? raw : Map<String, dynamic>.from(raw as Map));
+      _cachedScore = score;
+      return score;
     } on DioException catch (e) {
       throw apiExceptionFrom(e);
     }

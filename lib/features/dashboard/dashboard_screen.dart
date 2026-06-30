@@ -353,9 +353,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (_loading)
             const _LoadingCard()
           else if (_dashboard != null && _dashboard!.risk.scoredAt != null)
-            _ApiRiskCard(dashboard: _dashboard!)
+            InkWell(
+              onTap: () => widget.onView(MainView.ai),
+              borderRadius: BorderRadius.circular(28),
+              child: _ApiRiskCard(dashboard: _dashboard!),
+            )
           else
-            HealthScoreCard(record: latest),
+            InkWell(
+              onTap: () => widget.onView(MainView.ai),
+              borderRadius: BorderRadius.circular(28),
+              child: HealthScoreCard(record: latest),
+            ),
           const SizedBox(height: 20),
 
           // ── Aksi Cepat (Quick Actions) ───────────────────────────────────────
@@ -1234,7 +1242,7 @@ class _ApiRiskCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Risiko AI Terkini',
+                const Text('Health Score AI',
                     style: TextStyle(
                         color: Color(0xD9FFFFFF),
                         fontWeight: FontWeight.w600,
@@ -1258,7 +1266,9 @@ class _ApiRiskCard extends StatelessWidget {
                         Text(statusEmoji, style: const TextStyle(fontSize: 13)),
                         const SizedBox(width: 7),
                         Text(
-                          '${risk.riskLabel[0].toUpperCase()}${risk.riskLabel.substring(1)} · ${risk.status}',
+                          risk.status == 'bahaya'
+                              ? 'Bahaya'
+                              : (risk.status == 'waswas' ? 'Waswas' : 'Aman'),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w800,

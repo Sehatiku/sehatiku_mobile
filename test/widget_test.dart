@@ -185,7 +185,7 @@ void main() {
 
     // Dashboard
     expect(find.text('Hallo Lavinia 👋'), findsOneWidget);
-    expect(find.text('Risiko AI Terkini'), findsOneWidget);
+    expect(find.text('Health Score AI'), findsOneWidget);
 
     // Navigate to the daily record screen via the bottom nav.
     await tester.tap(find.text('Catat').first);

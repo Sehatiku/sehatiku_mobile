@@ -5,6 +5,9 @@ class HistoryEntry {
     this.systolic,
     this.diastolic,
     this.weight,
+    this.healthScore,
+    this.status,
+    this.statusLabel,
   });
 
   final DateTime date;
@@ -12,6 +15,9 @@ class HistoryEntry {
   final int? systolic;
   final int? diastolic;
   final double? weight;
+  final int? healthScore;
+  final String? status;
+  final String? statusLabel;
 
   factory HistoryEntry.fromJson(Map<String, dynamic> json) {
     // Parse YYYY-MM-DD date.
@@ -23,6 +29,11 @@ class HistoryEntry {
       systolic: json['systolic'] as int?,
       diastolic: json['diastolic'] as int?,
       weight: (json['weight'] as num?)?.toDouble(),
+      healthScore: json['health_score'] != null
+          ? (json['health_score'] as num).toInt()
+          : (json['score'] as num?)?.toInt(),
+      status: json['status'] as String?,
+      statusLabel: json['status_label'] as String?,
     );
   }
 
@@ -33,6 +44,9 @@ class HistoryEntry {
       'systolic': systolic,
       'diastolic': diastolic,
       'weight': weight,
+      if (healthScore != null) 'health_score': healthScore,
+      if (status != null) 'status': status,
+      if (statusLabel != null) 'status_label': statusLabel,
     };
   }
 }

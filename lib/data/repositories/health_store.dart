@@ -134,6 +134,9 @@ class HealthStore extends ChangeNotifier {
       if (existingIndex != -1) {
         final existing = _records[existingIndex];
         _records[existingIndex] = existing.copyWith(
+          healthScore: entry.healthScore,
+          apiStatus: entry.status,
+          apiStatusLabel: entry.statusLabel,
           bloodSugar: entry.bloodSugar,
           systolic: entry.systolic,
           diastolic: entry.diastolic,
@@ -142,6 +145,9 @@ class HealthStore extends ChangeNotifier {
       } else {
         _records.add(HealthRecord(
           date: key,
+          healthScore: entry.healthScore,
+          apiStatus: entry.status,
+          apiStatusLabel: entry.statusLabel,
           bloodSugar: entry.bloodSugar,
           systolic: entry.systolic,
           diastolic: entry.diastolic,
