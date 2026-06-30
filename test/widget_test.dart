@@ -70,6 +70,39 @@ void main() {
               }
             },
           ));
+        } else if (options.path.contains('/api/v1/patients/summary')) {
+          handler.resolve(Response(
+            requestOptions: options,
+            statusCode: 200,
+            data: {
+              'message': 'ringkasan kesehatan berhasil diambil',
+              'data': {
+                'window': 7,
+                'available': true,
+                'available_windows': [7],
+                'history_days': 4,
+                'narrative': 'Berdasarkan tren 7 hari terakhir, gula darah & tekanan Anda diprediksi tetap stabil bila pola hidup sehat dipertahankan.',
+              }
+            },
+          ));
+        } else if (options.path.contains('/api/v1/patients/health-score')) {
+          handler.resolve(Response(
+            requestOptions: options,
+            statusCode: 200,
+            data: {
+              'message': 'success',
+              'data': {
+                'health_score': 37.0,
+                'status': 'bahaya',
+                'status_label': 'Parah',
+                'message': 'Beberapa indikator berisiko. Pertimbangkan konsultasi dengan dokter Anda.',
+                'top_penalties': [
+                  'Tekanan darah sistolik tinggi',
+                  'Kadar gula darah tinggi'
+                ]
+              }
+            },
+          ));
         } else if (options.path.contains('/api/v1/patients/assigned-nakes')) {
           handler.resolve(Response(
             requestOptions: options,

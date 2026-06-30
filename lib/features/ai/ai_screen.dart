@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:sehatiku_mobile/core/core.dart';
 import 'package:sehatiku_mobile/data/repositories/health_store.dart';
+import 'package:sehatiku_mobile/data/services/api_client.dart';
 import 'package:sehatiku_mobile/data/services/dashboard_service.dart';
 import 'package:sehatiku_mobile/shared/widgets/widgets.dart';
 import 'package:sehatiku_mobile/data/services/record_service.dart';
@@ -24,7 +25,7 @@ class _RecommendationItem {
   final Widget trailing;
 }
 
-class AiScreen extends StatelessWidget {
+class AiScreen extends StatefulWidget {
   const AiScreen({
     super.key,
     required this.forecastIndex,
@@ -37,11 +38,89 @@ class AiScreen extends StatelessWidget {
   final ValueChanged<String> onAction;
 
   @override
+  State<AiScreen> createState() => _AiScreenState();
+}
+
+class _AiScreenState extends State<AiScreen> {
+  final Map<int, String> _summaries = {};
+  final Map<int, bool> _loading = {};
+  final Map<int, String?> _errors = {};
+  List<int> _availableWindows = [7];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchSummaryForIndex(widget.forecastIndex);
+    _fetchHealthScore();
+  }
+
+  @override
+  void didUpdateWidget(AiScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.forecastIndex != oldWidget.forecastIndex) {
+      _fetchSummaryForIndex(widget.forecastIndex);
+    }
+  }
+
+  Future<void> _fetchHealthScore() async {
+    try {
+      await RecordService.instance.fetchHealthScore(forceRefresh: true);
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      debugPrint('DEBUG: Error fetching health score in AiScreen: $e');
+    }
+  }
+
+  Future<void> _fetchSummaryForIndex(int index) async {
+    final days = const [7, 14, 30][index];
+    if (_summaries.containsKey(days)) return; // Already cached
+
+    setState(() {
+      _loading[days] = true;
+      _errors[days] = null;
+    });
+
+    try {
+      final res = await DashboardService.instance.fetchAiSummary(days);
+      if (mounted) {
+        setState(() {
+          _summaries[days] = res.narrative;
+          _availableWindows = res.availableWindows;
+          _loading[days] = false;
+        });
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() {
+          _errors[days] = e.message;
+          _loading[days] = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _errors[days] = 'Gagal memuat penjelasan AI. Silakan coba lagi.';
+          _loading[days] = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final forecastIndex = widget.forecastIndex;
+    final onForecast = widget.onForecast;
     final c = AppColors.of(context);
-    final foreLabel = const ['7 hari', '14 hari', '30 hari'][forecastIndex];
     final latest = HealthScope.of(context).latest;
     final today = HealthScope.of(context).today;
+
+    final List<int> enabledPillIndices = [];
+    if (_availableWindows.contains(7)) enabledPillIndices.add(0);
+    if (_availableWindows.contains(14)) enabledPillIndices.add(1);
+    if (_availableWindows.contains(30)) enabledPillIndices.add(2);
+    if (enabledPillIndices.isEmpty) enabledPillIndices.add(0);
 
     // Prefer API risk data; fall back to locally computed heuristic.
     final apiDashboard = DashboardService.instance.cachedDashboard;
@@ -329,11 +408,16 @@ class AiScreen extends StatelessWidget {
                 labels: const ['7 Hari', '14 Hari', '30 Hari'],
                 selected: forecastIndex,
                 onTap: onForecast,
+                enabledIndices: enabledPillIndices,
               ),
               const SizedBox(height: 16),
               GradientPanel(
-                radius: 24,
-                colors: const [AppColors.violet, AppColors.cyan],
+                radius: 26,
+                colors: const [
+                  AppColors.violet,
+                  Color(0xFF9B7BFF),
+                  AppColors.cyan
+                ],
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -366,34 +450,89 @@ class AiScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 13),
-                    Text(
-                      'Berdasarkan tren $foreLabel terakhir, gula darah & tekanan Anda diprediksi tetap stabil bila pola hidup sehat dipertahankan.',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14.5,
-                        height: 1.6,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton.icon(
-                      onPressed: () => onAction(
-                        'Penjelasan lengkap prediksi $foreLabel dibuka.',
-                      ),
-                      icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                      label: const Text('Lihat Penjelasan Lengkap'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: AppColors.violet,
-                        textStyle: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13.5,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                    ),
+                    () {
+                      final days = const [7, 14, 30][forecastIndex];
+                      final isLoading = _loading[days] ?? false;
+                      final errorMessage = _errors[days];
+                      final summary = _summaries[days];
+
+                      if (isLoading) {
+                        return const Padding(
+                          padding: EdgeInsets.only(top: 16, bottom: 8),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              Text(
+                                'Mengambil penjelasan AI...',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      if (errorMessage != null) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 13),
+                            Text(
+                              errorMessage,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14.5,
+                                height: 1.6,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            FilledButton.icon(
+                              onPressed: () => _fetchSummaryForIndex(forecastIndex),
+                              icon: const Icon(Icons.refresh_rounded, size: 18),
+                              label: const Text('Coba Lagi'),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: AppColors.violet,
+                                textStyle: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13.5,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 13),
+                          Text(
+                            summary != null ? '"$summary"' : 'Tidak ada penjelasan AI.',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w700,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      );
+                    }(),
                   ],
                 ),
               ),

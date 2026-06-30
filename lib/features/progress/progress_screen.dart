@@ -205,37 +205,25 @@ class _ProgressScreenState extends State<ProgressScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${metric.name} · Rata-rata',
-                            style: TextStyle(
-                              color: AppColors.of(context).muted,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            metric.averageText,
-                            style: TextStyle(
-                              color: AppColors.of(context).text,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 28,
-                            ),
-                          ),
-                        ],
+                    Text(
+                      '${metric.name} · Rata-rata',
+                      style: TextStyle(
+                        color: AppColors.of(context).muted,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
                       ),
                     ),
-                    SegmentedMini(
-                      labels: const ['Minggu', 'Bulan', 'Tahun'],
-                      selected: widget.rangeIndex,
-                      onTap: widget.onRange,
+                    const SizedBox(height: 2),
+                    Text(
+                      metric.averageText,
+                      style: TextStyle(
+                        color: AppColors.of(context).text,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 28,
+                      ),
                     ),
                   ],
                 ),
@@ -310,68 +298,6 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 icon: hasChart ? trend.icon : null,
               ),
             ],
-          ),
-          const SizedBox(height: 14),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.of(context).surface,
-                  AppColors.of(context).elevated,
-                ],
-              ),
-              border: Border.all(
-                color: AppColors.of(context).line,
-              ),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(13),
-                    gradient: const LinearGradient(
-                      colors: [AppColors.violet, AppColors.cyan],
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.auto_awesome_rounded,
-                    color: Colors.white,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 13),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Analisis AI',
-                        style: TextStyle(
-                          color: AppColors.violet,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13.5,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        metric.insight(trend, hasChart),
-                        style: TextStyle(
-                          color: AppColors.of(context).text,
-                          fontSize: 13,
-                          height: 1.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
