@@ -404,161 +404,7 @@ class _AiScreenState extends State<AiScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SegmentedPills(
-                labels: const ['7 Hari', '14 Hari', '30 Hari'],
-                selected: forecastIndex,
-                onTap: onForecast,
-                enabledIndices: enabledPillIndices,
-              ),
-              const SizedBox(height: 16),
-              GradientPanel(
-                radius: 26,
-                colors: const [
-                  AppColors.violet,
-                  Color(0xFF9B7BFF),
-                  AppColors.cyan
-                ],
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: .2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.auto_awesome_rounded,
-                            color: Colors.white,
-                            size: 16,
-                          ),
-                          SizedBox(width: 7),
-                          Text(
-                            'Penjelasan AI',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    () {
-                      final days = const [7, 14, 30][forecastIndex];
-                      final isLoading = _loading[days] ?? false;
-                      final errorMessage = _errors[days];
-                      final summary = _summaries[days];
-
-                      if (isLoading) {
-                        return const Padding(
-                          padding: EdgeInsets.only(top: 16, bottom: 8),
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                              SizedBox(width: 12),
-                              Text(
-                                'Mengambil penjelasan AI...',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14.5,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-
-                      if (errorMessage != null) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 13),
-                            Text(
-                              errorMessage,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14.5,
-                                height: 1.6,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            FilledButton.icon(
-                              onPressed: () => _fetchSummaryForIndex(forecastIndex),
-                              icon: const Icon(Icons.refresh_rounded, size: 18),
-                              label: const Text('Coba Lagi'),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: AppColors.violet,
-                                textStyle: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 13.5,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      }
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 13),
-                          Text(
-                            summary != null ? '"$summary"' : 'Tidak ada penjelasan AI.',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14.5,
-                              fontWeight: FontWeight.w700,
-                              height: 1.5,
-                            ),
-                          ),
-                        ],
-                      );
-                    }(),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              const SectionTitle(title: 'Rekomendasi Hari Ini'),
-              const SizedBox(height: 13),
-              AppCard(
-                padding: 6,
-                child: Column(
-                  children: [
-                    for (int i = 0; i < recommendationItems.length; i++) ...[
-                      RecommendTile(
-                        icon: recommendationItems[i].icon,
-                        color: recommendationItems[i].color,
-                        bg: recommendationItems[i].bg,
-                        title: recommendationItems[i].title,
-                        desc: recommendationItems[i].desc,
-                        trailing: recommendationItems[i].trailing,
-                      ),
-                      if (i < recommendationItems.length - 1)
-                        const _DividerLine(),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
+              // Health Score Section (Moved above AI Summary)
               const SectionTitle(title: 'Health Score'),
               const SizedBox(height: 13),
               AppCard(
@@ -667,6 +513,183 @@ class _AiScreenState extends State<AiScreen> {
                               ],
                             ),
                           )),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // AI Summary Section
+              SegmentedPills(
+                labels: const ['7 Hari', '14 Hari', '30 Hari'],
+                selected: forecastIndex,
+                onTap: onForecast,
+                enabledIndices: enabledPillIndices,
+              ),
+              const SizedBox(height: 16),
+              GradientPanel(
+                radius: 26,
+                colors: const [
+                  AppColors.violet,
+                  Color(0xFF9B7BFF),
+                  AppColors.cyan
+                ],
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: .2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.auto_awesome_rounded,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                          SizedBox(width: 7),
+                          Text(
+                            'Penjelasan AI',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    () {
+                      final days = const [7, 14, 30][forecastIndex];
+                      final isLoading = _loading[days] ?? false;
+                      final errorMessage = _errors[days];
+                      final summary = _summaries[days];
+
+                      if (!hasData) {
+                        return const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(height: 13),
+                            Text(
+                              'Belum ada penjelasan, harus isi data',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w700,
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+
+                      if (isLoading) {
+                        return const Padding(
+                          padding: EdgeInsets.only(top: 16, bottom: 8),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              Text(
+                                'Mengambil penjelasan AI...',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      if (errorMessage != null) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 13),
+                            Text(
+                              errorMessage,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14.5,
+                                height: 1.6,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            FilledButton.icon(
+                              onPressed: () => _fetchSummaryForIndex(forecastIndex),
+                              icon: const Icon(Icons.refresh_rounded, size: 18),
+                              label: const Text('Coba Lagi'),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: AppColors.violet,
+                                textStyle: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13.5,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 13),
+                          Text(
+                            summary != null ? '"$summary"' : 'Tidak ada penjelasan AI.',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w700,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      );
+                    }(),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Rekomendasi Section (Below AI Summary)
+              const SectionTitle(title: 'Rekomendasi Hari Ini'),
+              const SizedBox(height: 13),
+              AppCard(
+                padding: 6,
+                child: Column(
+                  children: [
+                    for (int i = 0; i < recommendationItems.length; i++) ...[
+                      RecommendTile(
+                        icon: recommendationItems[i].icon,
+                        color: recommendationItems[i].color,
+                        bg: recommendationItems[i].bg,
+                        title: recommendationItems[i].title,
+                        desc: recommendationItems[i].desc,
+                        trailing: recommendationItems[i].trailing,
+                      ),
+                      if (i < recommendationItems.length - 1)
+                        const _DividerLine(),
                     ],
                   ],
                 ),

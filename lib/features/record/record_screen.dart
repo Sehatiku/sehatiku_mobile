@@ -51,8 +51,14 @@ class _RecordScreenState extends State<RecordScreen> {
 
   int _currentTab = 0; // 0: Vital, 1: Aktivitas, 2: Kondisi
   late DateTime _selectedDate;
+  bool _loggedTodayFromServer = false;
 
   bool get _isLocked {
+    final today = HealthRecord.dayOf(DateTime.now());
+    if (HealthRecord.dayOf(_selectedDate) == today && _loggedTodayFromServer) {
+      return true;
+    }
+
     final record = HealthScope.of(context).recordFor(_selectedDate);
     if (record == null) return false;
 
@@ -79,6 +85,11 @@ class _RecordScreenState extends State<RecordScreen> {
 
     try {
       final loggedToday = await RecordService.instance.fetchLoggedToday();
+      if (mounted) {
+        setState(() {
+          _loggedTodayFromServer = loggedToday;
+        });
+      }
       if (loggedToday && mounted) {
         final entries = await RecordService.instance.fetchHistory(limit: 5);
         if (mounted) {
@@ -346,7 +357,13 @@ class _RecordScreenState extends State<RecordScreen> {
     }
 
     if (!mounted) return;
-    setState(() => _saving = false);
+    setState(() {
+      _saving = false;
+      final today = HealthRecord.dayOf(DateTime.now());
+      if (HealthRecord.dayOf(_selectedDate) == today) {
+        _loggedTodayFromServer = true;
+      }
+    });
 
     if (score != null && score.topPenalties.isNotEmpty) {
       await _showScoreResultSheet(score);
@@ -1927,6 +1944,9 @@ class _RecordScreenState extends State<RecordScreen> {
               final normalized = HealthRecord.dayOf(picked);
               setState(() => _selectedDate = normalized);
               _loadRecordForDate(normalized);
+              if (normalized == today) {
+                _syncTodayRecord();
+              }
             }
           },
           colors: colors,
