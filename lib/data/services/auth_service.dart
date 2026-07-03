@@ -4,6 +4,7 @@ import 'package:sehatiku_mobile/data/models/auth_models.dart';
 import 'package:sehatiku_mobile/data/repositories/auth_store.dart';
 import 'package:sehatiku_mobile/data/services/api_client.dart';
 import 'package:sehatiku_mobile/data/services/record_service.dart';
+import 'package:sehatiku_mobile/data/services/push_notification_service.dart';
 
 /// Wraps all auth-related API calls for both patient and nakes actors.
 class AuthService {
@@ -85,6 +86,8 @@ class AuthService {
   /// If the server call fails, the local session is still cleared so the user
   /// is always logged out from the client's perspective.
   Future<void> logout() async {
+    await PushNotificationService.instance.clearDeviceToken();
+
     final refreshToken = AuthStore.instance.session?.refreshToken;
     if (refreshToken != null) {
       try {

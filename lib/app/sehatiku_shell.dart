@@ -7,6 +7,7 @@ import 'package:sehatiku_mobile/data/models/auth_models.dart';
 import 'package:sehatiku_mobile/data/repositories/health_store.dart';
 import 'package:sehatiku_mobile/data/services/auth_service.dart';
 import 'package:sehatiku_mobile/data/services/dashboard_service.dart';
+import 'package:sehatiku_mobile/data/services/push_notification_service.dart';
 import 'package:sehatiku_mobile/features/auth/login_screen.dart';
 import 'package:sehatiku_mobile/features/dashboard/dashboard_screen.dart';
 import 'package:sehatiku_mobile/features/home/app_home.dart';
@@ -49,6 +50,7 @@ class _SehatikuShellState extends State<SehatikuShell> {
   void initState() {
     super.initState();
     _session = widget.initialSession;
+    unawaited(PushNotificationService.instance.initialize(onTap: _handlePushTap));
 
     _splashTimer = Timer(const Duration(milliseconds: 2600), () {
       if (mounted && _stage == Stage.splash) {
@@ -104,6 +106,24 @@ class _SehatikuShellState extends State<SehatikuShell> {
       _stage = Stage.app;
       _view = MainView.beranda;
       _recordInitialDate = null;
+    });
+    unawaited(PushNotificationService.instance.syncPatientSession());
+  }
+
+  void _handlePushTap(Map<String, dynamic> data) {
+    final type = (data['type'] ?? '').toString().trim();
+    if (!mounted || _session == null) return;
+
+    setState(() {
+      _stage = Stage.app;
+      _recordInitialDate = null;
+      if (type == 'consultation_reply') {
+        _previousView = _view;
+        _view = MainView.dokter;
+      } else {
+        _previousView = _view;
+        _view = MainView.notifikasi;
+      }
     });
   }
 
