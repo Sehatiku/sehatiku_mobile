@@ -154,6 +154,14 @@ class PushNotificationService {
     }
 
     try {
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        final apnsToken = await _waitForApnsToken();
+        if (apnsToken == null) {
+          debugPrint('[Push] APNs token never became available, aborting registration.');
+          return;
+        }
+      }
+
       debugPrint('[Push] Calling _messaging.getToken()...');
       final token = await _messaging.getToken();
       debugPrint('[Push] _messaging.getToken() returned: ${token != null ? _maskToken(token) : 'null'}');
@@ -166,6 +174,19 @@ class PushNotificationService {
       debugPrint('[Push] Failed to get FCM token: $e');
       debugPrint('$stackTrace');
     }
+  }
+
+  /// On iOS, the FCM token can't be fetched until APNs has finished
+  /// registering the device, which happens asynchronously right after
+  /// permission is granted. Poll briefly instead of failing immediately.
+  Future<String?> _waitForApnsToken() async {
+    for (var attempt = 0; attempt < 10; attempt++) {
+      final apnsToken = await _messaging.getAPNSToken();
+      if (apnsToken != null) return apnsToken;
+      debugPrint('[Push] APNs token not ready yet (attempt ${attempt + 1}/10), retrying...');
+      await Future.delayed(const Duration(seconds: 1));
+    }
+    return null;
   }
 
   Future<void> _registerToken(String token) async {
