@@ -117,13 +117,12 @@ class _SehatikuShellState extends State<SehatikuShell> {
     setState(() {
       _stage = Stage.app;
       _recordInitialDate = null;
-      if (type == 'consultation_reply') {
-        _previousView = _view;
-        _view = MainView.dokter;
-      } else {
-        _previousView = _view;
-        _view = MainView.notifikasi;
-      }
+      _previousView = _view;
+      _view = switch (type) {
+        'consultation_reply' => MainView.dokter,
+        'escalation' => MainView.beranda,
+        _ => MainView.notifikasi,
+      };
     });
   }
 

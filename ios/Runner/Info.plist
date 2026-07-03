@@ -76,6 +76,12 @@
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Allow local network access for Flutter debugging.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<false/>
 </dict>
 </plist>
 
