@@ -206,7 +206,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
                           ),
                         ),
                         child: Image.network(
-                          portraitUrlFor('dokter-${doctor.fullName}'),
+                          doctorPortraitUrlFor(doctor.fullName),
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) => const Icon(
                             Icons.medical_services_rounded,

@@ -94,7 +94,7 @@ class DoctorTile extends StatelessWidget {
             CircleAvatar(
               radius: 27,
               backgroundColor: color.withValues(alpha: .12),
-              backgroundImage: NetworkImage(portraitUrlFor('dokter-$name')),
+              backgroundImage: NetworkImage(doctorPortraitUrlFor(name)),
               onBackgroundImageError: (_, __) {},
               child: Icon(Icons.local_hospital_rounded, color: color),
             ),

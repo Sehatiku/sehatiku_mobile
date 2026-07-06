@@ -1,9 +1,17 @@
-/// Deterministic real-person portrait photo for a given name, sourced from
-/// randomuser.me's static portrait set. Same [seed] always resolves to the
-/// same photo, so a given doctor/patient keeps a stable avatar.
-String portraitUrlFor(String seed) {
+/// Deterministic real-photo avatars sourced from LoremFlickr, which serves
+/// actual tagged stock photos (not illustrations). The `lock` param pins a
+/// single photo per seed so a given doctor/patient keeps a stable avatar.
+int _seedLock(String seed) {
   final hash = seed.codeUnits.fold<int>(0, (sum, c) => sum + c);
-  final gender = hash.isEven ? 'men' : 'women';
-  final index = hash % 100;
-  return 'https://randomuser.me/api/portraits/$gender/$index.jpg';
+  return hash % 100;
+}
+
+/// A real photo of a person in doctor/medical attire.
+String doctorPortraitUrlFor(String seed) {
+  return 'https://loremflickr.com/300/300/doctor,uniform?lock=${_seedLock(seed)}';
+}
+
+/// A real portrait photo of a person, for patient/profile avatars.
+String patientPortraitUrlFor(String seed) {
+  return 'https://loremflickr.com/300/300/person,portrait?lock=${_seedLock(seed)}';
 }
