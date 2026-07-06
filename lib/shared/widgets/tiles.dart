@@ -94,9 +94,7 @@ class DoctorTile extends StatelessWidget {
             CircleAvatar(
               radius: 27,
               backgroundColor: color.withValues(alpha: .12),
-              backgroundImage: NetworkImage(
-                'https://api.dicebear.com/9.x/personas/png?seed=dokter-${Uri.encodeComponent(name)}&size=150&backgroundColor=transparent',
-              ),
+              backgroundImage: NetworkImage(portraitUrlFor('dokter-$name')),
               onBackgroundImageError: (_, __) {},
               child: Icon(Icons.local_hospital_rounded, color: color),
             ),

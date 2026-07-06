@@ -206,7 +206,7 @@ class _DoctorScreenState extends State<DoctorScreen> {
                           ),
                         ),
                         child: Image.network(
-                          'https://api.dicebear.com/9.x/personas/png?seed=dokter-${Uri.encodeComponent(doctor.fullName)}&size=150&backgroundColor=transparent',
+                          portraitUrlFor('dokter-${doctor.fullName}'),
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) => const Icon(
                             Icons.medical_services_rounded,
