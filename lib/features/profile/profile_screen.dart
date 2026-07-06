@@ -111,7 +111,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: Image.network(
-                    'https://i.pravatar.cc/150?u=${Uri.encodeComponent(displayName)}',
+                    'https://api.dicebear.com/9.x/personas/png?seed=pasien-${Uri.encodeComponent(displayName)}&size=150&backgroundColor=transparent',
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Text(
                       initials,
