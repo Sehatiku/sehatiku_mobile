@@ -195,23 +195,26 @@ class _DoctorScreenState extends State<DoctorScreen> {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(18),
-                      child: Container(
+                      child: SizedBox(
                         width: 60,
                         height: 60,
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [AppColors.primary, AppColors.cyan],
-                          ),
-                        ),
                         child: Image.asset(
                           doctorAvatarAssetFor(doctor.fullName),
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => const Icon(
-                            Icons.medical_services_rounded,
-                            color: Colors.white,
-                            size: 32,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [AppColors.primary, AppColors.cyan],
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: const Icon(
+                              Icons.medical_services_rounded,
+                              color: Colors.white,
+                              size: 32,
+                            ),
                           ),
                         ),
                       ),

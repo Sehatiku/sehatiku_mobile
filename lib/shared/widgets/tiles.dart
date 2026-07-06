@@ -96,7 +96,6 @@ class DoctorTile extends StatelessWidget {
               backgroundColor: color.withValues(alpha: .12),
               backgroundImage: AssetImage(doctorAvatarAssetFor(name)),
               onBackgroundImageError: (_, __) {},
-              child: Icon(Icons.local_hospital_rounded, color: color),
             ),
             const SizedBox(width: 14),
             Expanded(
