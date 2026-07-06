@@ -44,6 +44,7 @@ class _RecordScreenState extends State<RecordScreen> {
   bool _medicineTaken = false;
   bool _saving = false;
   bool _active30 = false;
+  bool _showForm = false;
   int _sleepQuality = 1; // 0=Buruk, 1=Cukup, 2=Nyenyak
   int _stressIndex = 1; // 0=Santai, 1=Normal, 2=Tinggi
   bool _smoke = false;
@@ -1955,13 +1956,359 @@ class _RecordScreenState extends State<RecordScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
+  Widget _buildChecklistLanding(AppColors colors) {
+    final medicineDone = _medicineTaken;
+    final glucoseDone = _bsController.text.trim().isNotEmpty;
+    final bpDone = _sysController.text.trim().isNotEmpty &&
+        _diaController.text.trim().isNotEmpty;
+    final doneCount = [medicineDone, glucoseDone, bpDone].where((b) => b).length;
+    final allDone = doneCount == 3;
+    final progressColor = allDone ? AppColors.green : AppColors.primary;
+
+    final store = HealthScope.of(context);
+    final recordDates = store.records
+        .map((r) => DateTime(r.date.year, r.date.month, r.date.day))
+        .toSet();
+    final now = DateTime.now();
+    final todayMidnight = DateTime(now.year, now.month, now.day);
+    final loggedToday = recordDates.contains(todayMidnight);
+
     return AppScroll(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          PageHeading(
+            title: 'Cek Harian',
+            subtitle: formatLongDate(_selectedDate),
+          ),
+          const SizedBox(height: 16),
+          GestureDetector(
+            onTap: () => setState(() => _showForm = true),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: (allDone ? AppColors.green : AppColors.primary)
+                    .withValues(alpha: .1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: (allDone ? AppColors.green : AppColors.primary)
+                      .withValues(alpha: .25),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: (allDone ? AppColors.green : AppColors.primary)
+                          .withValues(alpha: .16),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      allDone
+                          ? Icons.event_available_rounded
+                          : Icons.edit_calendar_rounded,
+                      color: allDone ? AppColors.green : AppColors.primary,
+                      size: 19,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          allDone
+                              ? 'Catatan hari ini sudah lengkap'
+                              : 'Belum mencatat hari ini',
+                          style: TextStyle(
+                            color: colors.text,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Ketuk untuk mengisi catatan harian.',
+                          style: TextStyle(color: colors.muted, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded, color: colors.muted),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 22),
+          const SectionTitle(title: 'Cek Harian'),
+          const SizedBox(height: 13),
+          AppCard(
+            padding: 20,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color: progressColor.withValues(alpha: .14),
+                            borderRadius: BorderRadius.circular(11),
+                          ),
+                          child: Icon(
+                            allDone
+                                ? Icons.task_alt_rounded
+                                : Icons.checklist_rounded,
+                            color: progressColor,
+                            size: 19,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          allDone ? 'Semua Selesai!' : 'Cek Harian',
+                          style: TextStyle(
+                            color: colors.text,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: allDone
+                            ? AppColors.green.withValues(alpha: .15)
+                            : AppColors.amber.withValues(alpha: .15),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '$doneCount / 3',
+                        style: TextStyle(
+                          color: allDone ? AppColors.green : AppColors.amber,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 13),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: doneCount / 3,
+                    minHeight: 6,
+                    backgroundColor: colors.line,
+                    valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _CheckRow(
+                  icon: Icons.medication_rounded,
+                  label: 'Minum Obat',
+                  done: medicineDone,
+                  doneLabel: 'Sudah diminum hari ini',
+                  pendingLabel: 'Belum diminum',
+                  color: AppColors.violet,
+                  colors: colors,
+                ),
+                const SizedBox(height: 10),
+                _CheckRow(
+                  icon: Icons.water_drop_rounded,
+                  label: 'Catat Gula Darah',
+                  done: glucoseDone,
+                  doneLabel: '${_bsController.text} mg/dL',
+                  pendingLabel: 'Belum tercatat',
+                  color: AppColors.primary,
+                  colors: colors,
+                ),
+                const SizedBox(height: 10),
+                _CheckRow(
+                  icon: Icons.favorite_rounded,
+                  label: 'Tekanan Darah',
+                  done: bpDone,
+                  doneLabel: '${_sysController.text}/${_diaController.text} mmHg',
+                  pendingLabel: 'Belum tercatat',
+                  color: AppColors.pink,
+                  colors: colors,
+                ),
+                if (!allDone) ...[
+                  const SizedBox(height: 16),
+                  GestureDetector(
+                    onTap: () => setState(() => _showForm = true),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [AppColors.primary, AppColors.cyan],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: .35),
+                            blurRadius: 16,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_rounded, color: Colors.white, size: 18),
+                          SizedBox(width: 6),
+                          Text(
+                            'Lengkapi Sekarang',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          AppCard(
+            padding: 16,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: (loggedToday ? AppColors.lime : AppColors.amber)
+                            .withValues(alpha: .16),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Icon(
+                        Icons.local_fire_department_rounded,
+                        color: loggedToday ? AppColors.lime : AppColors.amber,
+                        size: 26,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        loggedToday
+                            ? 'Sudah catat hari ini ✅'
+                            : 'Belum catat hari ini!',
+                        style: TextStyle(
+                          color: colors.text,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: List.generate(7, (i) {
+                    final daysAgo = 6 - i;
+                    final day = now.subtract(Duration(days: daysAgo));
+                    final dayMidnight = DateTime(day.year, day.month, day.day);
+                    const names = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+                    final label = names[day.weekday - 1];
+                    final isFilled = recordDates.contains(dayMidnight);
+                    final isToday = daysAgo == 0;
+                    return Column(
+                      children: [
+                        Text(
+                          label,
+                          style: TextStyle(
+                            color: isToday ? AppColors.amber : colors.muted,
+                            fontSize: 10.5,
+                            fontWeight: isToday ? FontWeight.w800 : FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isFilled
+                                ? AppColors.amber.withValues(alpha: .18)
+                                : colors.elevated,
+                            border: Border.all(
+                              color: isToday ? AppColors.amber : Colors.transparent,
+                              width: 2,
+                            ),
+                          ),
+                          child: Center(
+                            child: isFilled
+                                ? const Icon(Icons.check_rounded,
+                                    color: AppColors.amber, size: 14)
+                                : null,
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 90),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    if (!_showForm) return _buildChecklistLanding(colors);
+    return _buildForm(colors);
+  }
+
+  Widget _buildForm(AppColors colors) {
+    return AppScroll(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () => setState(() => _showForm = false),
+            borderRadius: BorderRadius.circular(20),
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.arrow_back_rounded, color: colors.muted, size: 18),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Kembali ke Cek Harian',
+                    style: TextStyle(
+                      color: colors.muted,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           PageHeading(
             title: 'Catatan Harian',
             subtitle: formatLongDate(_selectedDate),
@@ -2073,6 +2420,75 @@ class _DatePill extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _CheckRow extends StatelessWidget {
+  const _CheckRow({
+    required this.icon,
+    required this.label,
+    required this.done,
+    required this.doneLabel,
+    required this.pendingLabel,
+    required this.color,
+    required this.colors,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool done;
+  final String doneLabel;
+  final String pendingLabel;
+  final Color color;
+  final AppColors colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: done ? color.withValues(alpha: .13) : colors.elevated,
+            borderRadius: BorderRadius.circular(13),
+          ),
+          child: Icon(icon, color: done ? color : colors.muted, size: 21),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: colors.text,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13.5,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                done ? doneLabel : pendingLabel,
+                style: TextStyle(
+                  color: done ? color : colors.muted,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Icon(
+          done
+              ? Icons.check_circle_rounded
+              : Icons.radio_button_unchecked_rounded,
+          color: done ? color : colors.muted,
+          size: 22,
+        ),
+      ],
     );
   }
 }

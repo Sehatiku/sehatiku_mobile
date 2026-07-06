@@ -713,19 +713,12 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Image.asset(
-          'assets/images/logo3.png',
-          width: 52,
-          height: 52,
-          fit: BoxFit.contain,
-        ),
-        const SizedBox(width: 13),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Hallo $firstName 👋',
+                'Hallo, $firstName 👋',
                 style: TextStyle(
                     color: colors.text,
                     fontSize: 20,
