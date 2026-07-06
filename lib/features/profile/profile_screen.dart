@@ -110,8 +110,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   clipBehavior: Clip.antiAlias,
-                  child: Image.network(
-                    patientPortraitUrlFor(displayName),
+                  child: Image.asset(
+                    userAvatarAssetFor(displayName),
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Text(
                       initials,

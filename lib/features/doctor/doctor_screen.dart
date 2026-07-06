@@ -205,8 +205,8 @@ class _DoctorScreenState extends State<DoctorScreen> {
                             colors: [AppColors.primary, AppColors.cyan],
                           ),
                         ),
-                        child: Image.network(
-                          doctorPortraitUrlFor(doctor.fullName),
+                        child: Image.asset(
+                          doctorAvatarAssetFor(doctor.fullName),
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) => const Icon(
                             Icons.medical_services_rounded,
