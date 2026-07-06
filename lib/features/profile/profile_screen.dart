@@ -109,12 +109,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       width: 2,
                     ),
                   ),
-                  child: Text(
-                    initials,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 26,
+                  clipBehavior: Clip.antiAlias,
+                  child: Image.network(
+                    'https://i.pravatar.cc/150?u=${Uri.encodeComponent(displayName)}',
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Text(
+                      initials,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 26,
+                      ),
                     ),
                   ),
                 ),

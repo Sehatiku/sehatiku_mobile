@@ -473,46 +473,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                         },
                       ),
                     ),
-                    const SizedBox(height: 12),
-
-                    // Medical Encryption Banner
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 11,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isDark ? colors.elevated : const Color(0xFFF6FBF9),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isDark
-                              ? colors.line
-                              : const Color(0xFFE2F0EC),
-                        ),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(
-                            Icons.check_circle_rounded,
-                            size: 16,
-                            color: Color(0xFF10B981),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Data login Anda dienkripsi dan tidak dibagikan ke pihak lain.',
-                              style: TextStyle(
-                                color: isDark ? colors.muted : const Color(0xFF677E75),
-                                fontSize: 11.5,
-                                height: 1.45,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
               ),
