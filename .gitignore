@@ -45,9 +45,13 @@ app.*.map.json
 /android/app/release
 
 .config.kiro
+<<<<<<< HEAD
 /docs/
 
 # Firebase native config files. Keep the Console downloads local unless you
 # intentionally want them committed.
 /android/app/google-services.json
 /ios/Runner/GoogleService-Info.plist
+=======
+/docs/
+>>>>>>> parent of 3aa1e34 (Merge pull request #11 from Sehatiku/feat/pushNotif)
