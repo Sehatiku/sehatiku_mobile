@@ -44,6 +44,11 @@ dependencies:
   # Open URLs, WhatsApp links, etc.
   url_launcher: ^6.3.1
 
+  # Push notification via Firebase Cloud Messaging.
+  firebase_core: ^3.8.0
+  firebase_messaging: ^15.1.5
+  flutter_local_notifications: ^17.2.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
