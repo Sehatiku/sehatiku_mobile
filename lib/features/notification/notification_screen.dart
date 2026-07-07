@@ -23,6 +23,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   List<NotificationModel> _notifications = [];
+  int _selectedTab = 0;
 
   @override
   void initState() {
@@ -195,6 +196,72 @@ class _NotificationScreenState extends State<NotificationScreen> {
     return const Color(0xFFEAF2FE);
   }
 
+  Map<String, List<NotificationModel>> _groupNotifications(List<NotificationModel> list) {
+    final Map<String, List<NotificationModel>> groups = {
+      'Hari Ini': [],
+      'Kemarin': [],
+      'Lebih Lama': [],
+    };
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+
+    for (final n in list) {
+      final createdDate = DateTime(n.createdAt.year, n.createdAt.month, n.createdAt.day);
+      if (createdDate.isAtSameMomentAs(today)) {
+        groups['Hari Ini']!.add(n);
+      } else if (createdDate.isAtSameMomentAs(yesterday)) {
+        groups['Kemarin']!.add(n);
+      } else {
+        groups['Lebih Lama']!.add(n);
+      }
+    }
+
+    groups.removeWhere((key, value) => value.isEmpty);
+    return groups;
+  }
+
+  Widget _buildTab(int index, String label) {
+    final colors = AppColors.of(context);
+    final isSelected = _selectedTab == index;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedTab = index),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          gradient: isSelected
+              ? const LinearGradient(
+                  colors: [AppColors.primary, AppColors.primary2],
+                )
+              : null,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.2),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : colors.muted,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
@@ -291,41 +358,158 @@ class _NotificationScreenState extends State<NotificationScreen> {
       );
     } else {
       final hasUnread = _notifications.any((n) => !n.isRead);
+      final filteredList = _selectedTab == 0
+          ? _notifications
+          : _notifications.where((n) => !n.isRead).toList();
+
       content = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (hasUnread)
-            Align(
-              alignment: Alignment.centerRight,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: TextButton.icon(
-                  onPressed: _markAllAsRead,
-                  icon: const Icon(Icons.done_all_rounded, size: 18),
-                  label: const Text('Tandai Semua Dibaca'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          // ── Filter Row ───────────────────────────────────────────────────
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                Container(
+                  height: 42,
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: colors.elevated,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: colors.line.withValues(alpha: 0.5)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildTab(0, 'Semua'),
+                      const SizedBox(width: 4),
+                      _buildTab(1, 'Belum Dibaca'),
+                    ],
                   ),
                 ),
-              ),
+                const SizedBox(width: 16),
+                if (hasUnread)
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _markAllAsRead,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        height: 40,
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.25),
+                            width: 1.2,
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.done_all_rounded,
+                              color: AppColors.primary,
+                              size: 17,
+                            ),
+                            SizedBox(width: 6),
+                            Text(
+                              'Baca semua',
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-          ..._notifications.map((n) {
-            return NotifCard(
-              icon: _getIcon(n.type, n.title),
-              color: _getColor(n.type, n.title),
-              bg: _getBgColor(n.type, n.title),
-              title: n.title,
-              desc: n.message,
-              time: _formatRelativeTime(n.createdAt),
-              isRead: n.isRead,
-              onTap: () async {
-                await _markAsRead(n.id);
-                if (n.type == 'consultation_reply' && widget.onNavigate != null) {
-                  widget.onNavigate!(MainView.dokter);
-                }
-              },
-            );
-          }),
+          ),
+          const SizedBox(height: 18),
+
+          // ── Notifications Content ─────────────────────────────────────────
+          if (filteredList.isEmpty)
+            AppCard(
+              padding: 24,
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.notifications_off_outlined,
+                      color: colors.muted.withValues(alpha: 0.4),
+                      size: 40,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      _selectedTab == 0 ? 'Belum Ada Notifikasi' : 'Tidak Ada Notifikasi Baru',
+                      style: TextStyle(
+                        color: colors.text,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _selectedTab == 0
+                          ? 'Pemberitahuan mengenai aktivitas kesehatan Anda akan muncul di sini.'
+                          : 'Semua notifikasi Anda sudah dibaca.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: colors.muted,
+                        fontSize: 12.5,
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ...() {
+              final groups = _groupNotifications(filteredList);
+              return groups.entries.map((entry) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8, bottom: 12),
+                      child: Text(
+                        entry.key,
+                        style: TextStyle(
+                          color: colors.text,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    ...entry.value.map((n) {
+                      return NotifCard(
+                        icon: _getIcon(n.type, n.title),
+                        color: _getColor(n.type, n.title),
+                        bg: _getBgColor(n.type, n.title),
+                        title: n.title,
+                        desc: n.message,
+                        time: _formatRelativeTime(n.createdAt),
+                        isRead: n.isRead,
+                        onTap: () async {
+                          await _markAsRead(n.id);
+                          if (n.type == 'consultation_reply' && widget.onNavigate != null) {
+                            widget.onNavigate!(MainView.dokter);
+                          }
+                        },
+                      );
+                    }),
+                  ],
+                );
+              });
+            }(),
         ],
       );
     }

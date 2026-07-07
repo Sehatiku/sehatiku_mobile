@@ -88,9 +88,9 @@ class DashboardRisk {
   final String? scoredAt;
 
   factory DashboardRisk.fromJson(Map<String, dynamic> json) => DashboardRisk(
-        score: json['score'] as int,
-        riskLabel: json['risk_label'] as String,
-        status: json['status'] as String,
+        score: json['score'] as int? ?? 0,
+        riskLabel: json['risk_label'] as String? ?? '',
+        status: json['status'] as String? ?? '',
         statusLabel: json['status_label'] as String? ?? '',
         mainFactor: json['main_factor'] as String? ?? '',
         topPenalties: (json['top_penalties'] as List<dynamic>?)
@@ -112,7 +112,7 @@ class GlucoseMeasurement {
 
   factory GlucoseMeasurement.fromJson(Map<String, dynamic> json) =>
       GlucoseMeasurement(
-        value: json['value'] as int,
+        value: (json['value'] as num).toInt(),
         measuredAt: json['measured_at'] as String,
       );
 }
@@ -130,8 +130,8 @@ class BloodPressureMeasurement {
 
   factory BloodPressureMeasurement.fromJson(Map<String, dynamic> json) =>
       BloodPressureMeasurement(
-        systolic: json['systolic'] as int,
-        diastolic: json['diastolic'] as int,
+        systolic: (json['systolic'] as num).toInt(),
+        diastolic: (json['diastolic'] as num).toInt(),
         measuredAt: json['measured_at'] as String,
       );
 }
@@ -198,17 +198,35 @@ class PatientDashboard {
 
   factory PatientDashboard.fromJson(Map<String, dynamic> json) {
     final data = json['data'] as Map<String, dynamic>;
+    final profileJson = data['profile'] as Map<String, dynamic>?;
+    final riskJson = data['risk'] as Map<String, dynamic>?;
+    final latestMeasurementsJson = data['latest_measurements'] as Map<String, dynamic>?;
+    final loggingJson = data['logging'] as Map<String, dynamic>?;
+    final recommendationsJson = data['recommendations'] as List<dynamic>?;
+
     return PatientDashboard(
-      profile: DashboardProfile.fromJson(
-          data['profile'] as Map<String, dynamic>),
-      risk: DashboardRisk.fromJson(data['risk'] as Map<String, dynamic>),
-      latestMeasurements: LatestMeasurements.fromJson(
-          data['latest_measurements'] as Map<String, dynamic>),
-      logging: DashboardLogging.fromJson(
-          data['logging'] as Map<String, dynamic>),
-      recommendations: (data['recommendations'] as List<dynamic>)
-          .map((e) => e as String)
-          .toList(),
+      profile: profileJson != null
+          ? DashboardProfile.fromJson(profileJson)
+          : const DashboardProfile(fullName: 'Pengguna', age: 0, diseaseType: ''),
+      risk: riskJson != null
+          ? DashboardRisk.fromJson(riskJson)
+          : const DashboardRisk(
+              score: 0,
+              riskLabel: '',
+              status: '',
+              statusLabel: '',
+              mainFactor: '',
+              topPenalties: [],
+            ),
+      latestMeasurements: latestMeasurementsJson != null
+          ? LatestMeasurements.fromJson(latestMeasurementsJson)
+          : const LatestMeasurements(),
+      logging: loggingJson != null
+          ? DashboardLogging.fromJson(loggingJson)
+          : const DashboardLogging(loggedToday: false, streakDays: 0),
+      recommendations: recommendationsJson != null
+          ? recommendationsJson.map((e) => e as String).toList()
+          : const [],
     );
   }
 }

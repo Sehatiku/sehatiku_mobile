@@ -478,96 +478,124 @@ class NotifCard extends StatelessWidget {
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: Container(
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            color: c.surface,
+            color: isRead ? c.surface : AppColors.primary.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: c.line),
-            boxShadow: const [
+            border: Border.all(
+              color: isRead ? c.line : AppColors.primary.withValues(alpha: 0.2),
+              width: isRead ? 1 : 1.5,
+            ),
+            boxShadow: [
               BoxShadow(
-                color: Color(0x18000000),
-                blurRadius: 20,
-                offset: Offset(0, 8),
+                color: isRead
+                    ? c.text.withValues(alpha: 0.02)
+                    : AppColors.primary.withValues(alpha: 0.06),
+                blurRadius: isRead ? 8 : 12,
+                offset: isRead ? const Offset(0, 3) : const Offset(0, 4),
               ),
             ],
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: Stack(
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 4,
-                    color: color,
+                if (!isRead)
+                  Container(
+                    width: 4.5,
+                    decoration: const BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        bottomLeft: Radius.circular(20),
+                      ),
+                    ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(21, 17, 17, 17),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: AppColors.tint(color),
-                          borderRadius: BorderRadius.circular(13),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Opacity(
+                          opacity: isRead ? 0.65 : 1.0,
+                          child: Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: isRead ? bg.withValues(alpha: 0.6) : bg,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              icon,
+                              color: isRead ? color.withValues(alpha: 0.8) : color,
+                              size: 20,
+                            ),
+                          ),
                         ),
-                        child: Icon(icon, color: color, size: 22),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    title,
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            title,
+                                            style: TextStyle(
+                                              color: isRead ? c.text.withValues(alpha: 0.85) : c.text,
+                                              fontWeight: isRead ? FontWeight.w600 : FontWeight.w800,
+                                              fontSize: 14,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        if (!isRead) ...[
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            width: 7,
+                                            height: 7,
+                                            decoration: const BoxDecoration(
+                                              color: AppColors.primary,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    time,
                                     style: TextStyle(
-                                      color: c.text,
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 14.5,
+                                      color: isRead ? c.muted.withValues(alpha: 0.8) : AppColors.primary,
+                                      fontSize: 11,
+                                      fontWeight: isRead ? FontWeight.w500 : FontWeight.w700,
                                     ),
                                   ),
-                                ),
-                                if (!isRead) ...[
-                                  Container(
-                                    width: 7,
-                                    height: 7,
-                                    decoration: const BoxDecoration(
-                                      color: AppColors.primary,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
                                 ],
-                                Text(
-                                  time,
-                                  style: TextStyle(
-                                    color: c.muted,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              desc,
-                              style: TextStyle(
-                                color: c.muted,
-                                fontSize: 13,
-                                height: 1.5,
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 4),
+                              Text(
+                                desc,
+                                style: TextStyle(
+                                  color: isRead ? c.muted.withValues(alpha: 0.8) : c.text.withValues(alpha: 0.9),
+                                  fontSize: 12.5,
+                                  height: 1.45,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],

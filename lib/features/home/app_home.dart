@@ -66,85 +66,100 @@ class AppHome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      key: const ValueKey('app'),
-      children: [
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(color: AppColors.of(context).background),
+    return PopScope(
+      canPop: view == MainView.beranda,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (view == MainView.dokter) {
+          if (previousView == MainView.profil || previousView == MainView.beranda) {
+            onView(previousView!);
+          } else {
+            onView(MainView.beranda);
+          }
+        } else {
+          onView(MainView.beranda);
+        }
+      },
+      child: Stack(
+        key: const ValueKey('app'),
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(color: AppColors.of(context).background),
+            ),
           ),
-        ),
-        SafeArea(
-          bottom: false,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
-            child: switch (view) {
-              MainView.beranda => DashboardScreen(
-                onView: onView,
-                onViewRecordWithDate: onViewRecordWithDate,
-                fullName: session?.fullName,
-              ),
-              MainView.catatan => RecordScreen(
-                onSaved: onAction,
-                onView: onView,
-                initialDate: recordDate,
-              ),
-              MainView.ai => AiScreen(
-                forecastIndex: forecastIndex,
-                onForecast: onForecast,
-                onAction: onAction,
-              ),
-              MainView.progres => ProgressScreen(
-                progressIndex: progressIndex,
-                rangeIndex: rangeIndex,
-                onProgress: onProgress,
-                onRange: onRange,
-              ),
-              MainView.profil => ProfileScreen(
-                darkMode: darkMode,
-                onDarkMode: onDarkMode,
-                onLogout: onLogout,
-                onAction: onAction,
-                onDoctor: () => onView(MainView.dokter),
-                fullName: session?.fullName,
-              ),
-              MainView.dokter => DoctorScreen(
-                onBack: () {
-                  if (previousView == MainView.profil || previousView == MainView.beranda) {
-                    onView(previousView!);
-                  } else {
-                    onView(MainView.beranda);
-                  }
-                },
-                onAction: onAction,
-              ),
-              MainView.riwayat => HistoryScreen(
-                onBack: () => onView(MainView.beranda),
-                onViewRecordWithDate: onViewRecordWithDate,
-              ),
-              MainView.notifikasi => NotificationScreen(
-                onBack: () => onView(MainView.beranda),
-                onNavigate: onView,
-              ),
-              MainView.edukasi => EducationScreen(
-                onBack: () => onView(MainView.beranda),
-                selectedFilter: educationFilter,
-                onFilter: onEducationFilter,
-                onAction: onAction,
-              ),
-            },
+          SafeArea(
+            bottom: false,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              child: switch (view) {
+                MainView.beranda => DashboardScreen(
+                  onView: onView,
+                  onViewRecordWithDate: onViewRecordWithDate,
+                  fullName: session?.fullName,
+                ),
+                MainView.catatan => RecordScreen(
+                  onSaved: onAction,
+                  onView: onView,
+                  initialDate: recordDate,
+                ),
+                MainView.ai => AiScreen(
+                  forecastIndex: forecastIndex,
+                  onForecast: onForecast,
+                  onAction: onAction,
+                ),
+                MainView.progres => ProgressScreen(
+                  progressIndex: progressIndex,
+                  rangeIndex: rangeIndex,
+                  onProgress: onProgress,
+                  onRange: onRange,
+                ),
+                MainView.profil => ProfileScreen(
+                  darkMode: darkMode,
+                  onDarkMode: onDarkMode,
+                  onLogout: onLogout,
+                  onAction: onAction,
+                  onDoctor: () => onView(MainView.dokter),
+                  fullName: session?.fullName,
+                ),
+                MainView.dokter => DoctorScreen(
+                  onBack: () {
+                    if (previousView == MainView.profil || previousView == MainView.beranda) {
+                      onView(previousView!);
+                    } else {
+                      onView(MainView.beranda);
+                    }
+                  },
+                  onAction: onAction,
+                ),
+                MainView.riwayat => HistoryScreen(
+                  onBack: () => onView(MainView.beranda),
+                  onViewRecordWithDate: onViewRecordWithDate,
+                ),
+                MainView.notifikasi => NotificationScreen(
+                  onBack: () => onView(MainView.beranda),
+                  onNavigate: onView,
+                ),
+                MainView.edukasi => EducationScreen(
+                  onBack: () => onView(MainView.beranda),
+                  selectedFilter: educationFilter,
+                  onFilter: onEducationFilter,
+                  onAction: onAction,
+                ),
+              },
+            ),
           ),
-        ),
-        if (_showNav)
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeInOut,
-            left: 16,
-            right: 16,
-            bottom: MediaQuery.of(context).viewInsets.bottom > 0 ? -100 : 18,
-            child: FloatingNav(view: view, onView: onView),
-          ),
-      ],
+          if (_showNav)
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeInOut,
+              left: 16,
+              right: 16,
+              bottom: MediaQuery.of(context).viewInsets.bottom > 0 ? -100 : 18,
+              child: FloatingNav(view: view, onView: onView),
+            ),
+        ],
+      ),
     );
   }
 }

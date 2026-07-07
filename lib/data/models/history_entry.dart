@@ -25,9 +25,9 @@ class HistoryEntry {
     final parsedDate = DateTime.parse(dateStr);
     return HistoryEntry(
       date: DateTime(parsedDate.year, parsedDate.month, parsedDate.day),
-      bloodSugar: json['blood_sugar'] as int?,
-      systolic: json['systolic'] as int?,
-      diastolic: json['diastolic'] as int?,
+      bloodSugar: json['blood_sugar'] != null ? (json['blood_sugar'] as num).toInt() : null,
+      systolic: json['systolic'] != null ? (json['systolic'] as num).toInt() : null,
+      diastolic: json['diastolic'] != null ? (json['diastolic'] as num).toInt() : null,
       weight: (json['weight'] as num?)?.toDouble(),
       healthScore: json['health_score'] != null
           ? (json['health_score'] as num).toInt()

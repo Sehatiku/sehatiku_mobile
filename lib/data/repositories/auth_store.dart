@@ -29,15 +29,19 @@ class AuthStore extends ChangeNotifier {
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_key);
+    debugPrint('DEBUG: AuthStore load raw: $raw');
     if (raw != null && raw.isNotEmpty) {
       try {
         _session = Session.fromJson(
           jsonDecode(raw) as Map<String, dynamic>,
         );
-      } catch (_) {
-        // Corrupt data — treat as logged out.
+        debugPrint('DEBUG: AuthStore load success: ${_session!.fullName}');
+      } catch (e) {
+        debugPrint('DEBUG: AuthStore load error: $e');
         _session = null;
       }
+    } else {
+      debugPrint('DEBUG: AuthStore load: raw is null or empty');
     }
     notifyListeners();
   }
@@ -47,6 +51,7 @@ class AuthStore extends ChangeNotifier {
     _session = session;
     notifyListeners();
     await _persist();
+    debugPrint('DEBUG: AuthStore saved session for: ${session.fullName}');
   }
 
   /// Update tokens after a silent refresh.
@@ -62,6 +67,7 @@ class AuthStore extends ChangeNotifier {
     // Don't notifyListeners — this is a background operation; no UI needs to
     // rebuild just because the token rotated.
     await _persist();
+    debugPrint('DEBUG: AuthStore updated tokens');
   }
 
   /// Delete the session (logout / revoked token).
@@ -70,12 +76,15 @@ class AuthStore extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_key);
+    debugPrint('DEBUG: AuthStore cleared session');
   }
 
   Future<void> _persist() async {
     if (_session == null) return;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_key, jsonEncode(_session!.toJson()));
+    final jsonStr = jsonEncode(_session!.toJson());
+    await prefs.setString(_key, jsonStr);
+    debugPrint('DEBUG: AuthStore persisted JSON: $jsonStr');
   }
 }
 

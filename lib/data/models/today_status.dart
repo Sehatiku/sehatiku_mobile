@@ -15,7 +15,7 @@ class PatientTodayStatus {
     final data = json['data'] as Map<String, dynamic>;
     return PatientTodayStatus(
       loggedToday: data['logged_today'] as bool,
-      daysSinceLastLog: data['days_since_last_log'] as int?,
+      daysSinceLastLog: data['days_since_last_log'] != null ? (data['days_since_last_log'] as num).toInt() : null,
       lastLoggedAt: data['last_logged_at'] as String?,
       date: data['date'] as String,
     );

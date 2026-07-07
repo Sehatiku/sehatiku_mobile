@@ -21,6 +21,7 @@ class _ProgressMetric {
     required this.highText,
     required this.lowText,
     required this.lowerIsBetter,
+    this.unit = '',
   });
 
   final String name;
@@ -31,6 +32,7 @@ class _ProgressMetric {
   final String highText;
   final String lowText;
   final bool lowerIsBetter;
+  final String unit;
 
   String insight(TrendInfo t, bool hasChart) {
     if (!hasChart) {
@@ -66,6 +68,7 @@ _ProgressMetric _metricFor(int index, List<HealthRecord> recs) {
             : '${average(sys).round()}/${average(dia).round()}',
         highText: sys.isEmpty ? '—' : '${sys.reduce(math.max).round()}',
         lowText: sys.isEmpty ? '—' : '${sys.reduce(math.min).round()}',
+        unit: 'mmHg',
       );
     case 3:
       final rs = recs.where((r) => r.weight != null).toList();
@@ -79,6 +82,7 @@ _ProgressMetric _metricFor(int index, List<HealthRecord> recs) {
         averageText: vals.isEmpty ? '—' : '${average(vals).toStringAsFixed(1)} kg',
         highText: vals.isEmpty ? '—' : vals.reduce(math.max).toStringAsFixed(1),
         lowText: vals.isEmpty ? '—' : vals.reduce(math.min).toStringAsFixed(1),
+        unit: 'kg',
       );
     case 4:
       final rs = recs.toList();
@@ -93,6 +97,7 @@ _ProgressMetric _metricFor(int index, List<HealthRecord> recs) {
         averageText: vals.isEmpty ? '—' : '${average(vals).round()}%',
         highText: rs.isEmpty ? '—' : '$taken hari',
         lowText: rs.isEmpty ? '—' : '${rs.length - taken} hari',
+        unit: '%',
       );
     case 1:
     default:
@@ -107,6 +112,7 @@ _ProgressMetric _metricFor(int index, List<HealthRecord> recs) {
         averageText: vals.isEmpty ? '—' : '${average(vals).round()} mg/dL',
         highText: vals.isEmpty ? '—' : '${vals.reduce(math.max).round()}',
         lowText: vals.isEmpty ? '—' : '${vals.reduce(math.min).round()}',
+        unit: 'mg/dL',
       );
   }
 }
@@ -164,6 +170,103 @@ class _ProgressScreenState extends State<ProgressScreen> {
     }
   }
 
+  Color _tabColor(int index) {
+    return const [
+      AppColors.primary, // Baseline
+      AppColors.primary, // Gula Darah
+      AppColors.pink,    // Tekanan Darah
+      AppColors.violet,  // Berat Badan
+      AppColors.green,   // Kepatuhan Obat
+    ][index];
+  }
+
+  Widget _buildCustomTabBar(BuildContext context) {
+    final colors = AppColors.of(context);
+    final tabs = const [
+      'Baseline',
+      'Gula Darah',
+      'Tekanan Darah',
+      'Berat Badan',
+      'Kepatuhan Obat',
+    ];
+    final icons = const [
+      Icons.assignment_ind_rounded,
+      Icons.water_drop_rounded,
+      Icons.monitor_heart_rounded,
+      Icons.scale_rounded,
+      Icons.medication_rounded,
+    ];
+
+    return SizedBox(
+      height: 44,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: tabs.length,
+        itemBuilder: (context, i) {
+          final isSelected = widget.progressIndex == i;
+          final color = _tabColor(i);
+          
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+            margin: const EdgeInsets.only(right: 10),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => widget.onProgress(i),
+                borderRadius: BorderRadius.circular(20),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isSelected 
+                      ? color.withValues(alpha: 0.12) 
+                      : colors.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isSelected 
+                        ? color.withValues(alpha: 0.45) 
+                        : colors.line,
+                      width: 1.5,
+                    ),
+                    boxShadow: isSelected ? [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      )
+                    ] : null,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        icons[i],
+                        size: 15,
+                        color: isSelected ? color : colors.muted,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        tabs[i],
+                        style: TextStyle(
+                          color: isSelected ? color : colors.text,
+                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                          fontSize: 12.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final store = HealthScope.of(context);
@@ -188,54 +291,43 @@ class _ProgressScreenState extends State<ProgressScreen> {
               subtitle: 'Pantau tren Anda dari waktu ke waktu',
             ),
             const SizedBox(height: 18),
-            SizedBox(
-              height: 40,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  for (var i = 0; i < 5; i++)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 9),
-                      child: PillTab(
-                        label: const [
-                          'Baseline',
-                          'Gula Darah',
-                          'Tekanan Darah',
-                          'Berat Badan',
-                          'Kepatuhan Obat',
-                        ][i],
-                        selected: widget.progressIndex == i,
-                        onTap: () => widget.onProgress(i),
-                      ),
-                    ),
-                ],
-              ),
-            ),
+            _buildCustomTabBar(context),
             const SizedBox(height: 18),
             AppCard(
               padding: 22,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        '${metric.name} · Rata-rata',
-                        style: TextStyle(
-                          color: AppColors.of(context).muted,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${metric.name} · Rata-rata',
+                              style: TextStyle(
+                                color: AppColors.of(context).muted,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              metric.averageText,
+                              style: TextStyle(
+                                color: AppColors.of(context).text,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 28,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        metric.averageText,
-                        style: TextStyle(
-                          color: AppColors.of(context).text,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 28,
-                        ),
+                      _RangeSelector(
+                        selectedIndex: widget.rangeIndex,
+                        onChanged: widget.onRange,
                       ),
                     ],
                   ),
@@ -250,8 +342,13 @@ class _ProgressScreenState extends State<ProgressScreen> {
                             ),
                           )
                         : hasChart
-                            ? TrendChart(color: color, values: values)
-                            : const ChartEmpty(),
+                            ? TrendChart(
+                                color: color,
+                                values: values,
+                                dates: metric.records.map((r) => r.date).toList(),
+                                unit: metric.unit,
+                              )
+                            : _CreativeChartEmpty(color: color),
                   ),
                   const SizedBox(height: 8),
                   if (hasChart)
@@ -286,31 +383,39 @@ class _ProgressScreenState extends State<ProgressScreen> {
               physics: const NeverScrollableScrollPhysics(),
               mainAxisSpacing: 13,
               crossAxisSpacing: 13,
-              childAspectRatio: 1.7,
+              childAspectRatio: 1.5,
               children: [
-                StatBox(
+                _ProgressStatCard(
                   label: 'Tertinggi',
                   value: metric.highText,
                   color: AppColors.pink,
+                  icon: Icons.trending_up_rounded,
+                  metricIndex: widget.progressIndex,
                 ),
-                StatBox(
+                _ProgressStatCard(
                   label: 'Terendah',
                   value: metric.lowText,
                   color: AppColors.green,
+                  icon: Icons.trending_down_rounded,
+                  metricIndex: widget.progressIndex,
                 ),
-                StatBox(
+                _ProgressStatCard(
                   label: 'Rata-rata',
                   value: metric.averageText,
                   color: AppColors.primary,
+                  icon: Icons.functions_rounded,
+                  metricIndex: widget.progressIndex,
                 ),
-                StatBox(
+                _ProgressStatCard(
                   label: 'Tren',
                   value: hasChart ? trend.label : '—',
                   color: hasChart ? trend.color : AppColors.of(context).muted,
-                  icon: hasChart ? trend.icon : null,
+                  icon: hasChart ? trend.icon : Icons.timeline_rounded,
+                  metricIndex: widget.progressIndex,
                 ),
               ],
             ),
+            const SizedBox(height: 24),
           ],
         ),
       );
@@ -331,6 +436,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
     final disease = profile?.diseaseType ?? 'both';
 
     List<double> chartValues = [];
+    List<DateTime> chartDates = [];
     String chartTitle = '';
     Color chartColor = AppColors.primary;
 
@@ -341,12 +447,24 @@ class _ProgressScreenState extends State<ProgressScreen> {
           .toList()
           .reversed
           .toList();
+      chartDates = baselines
+          .where((e) => e.systolic != null)
+          .map((e) => e.date)
+          .toList()
+          .reversed
+          .toList();
       chartTitle = 'Baseline Tekanan Darah (Sistolik)';
       chartColor = AppColors.pink;
     } else {
       chartValues = baselines
           .where((e) => e.bloodSugar != null)
           .map((e) => e.bloodSugar!.toDouble())
+          .toList()
+          .reversed
+          .toList();
+      chartDates = baselines
+          .where((e) => e.bloodSugar != null)
+          .map((e) => e.date)
           .toList()
           .reversed
           .toList();
@@ -365,29 +483,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
             subtitle: 'Pantau tren Anda dari waktu ke waktu',
           ),
           const SizedBox(height: 18),
-          SizedBox(
-            height: 40,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                for (var i = 0; i < 5; i++)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 9),
-                    child: PillTab(
-                      label: const [
-                        'Baseline',
-                        'Gula Darah',
-                        'Tekanan Darah',
-                        'Berat Badan',
-                        'Kepatuhan Obat',
-                      ][i],
-                      selected: widget.progressIndex == i,
-                      onTap: () => widget.onProgress(i),
-                    ),
-                  ),
-              ],
-            ),
-          ),
+          _buildCustomTabBar(context),
           const SizedBox(height: 18),
           if (!hasBaselines) ...[
             const AppCard(
@@ -448,8 +544,13 @@ class _ProgressScreenState extends State<ProgressScreen> {
                             ),
                           )
                         : hasChart
-                            ? TrendChart(color: chartColor, values: chartValues)
-                            : const ChartEmpty(),
+                            ? TrendChart(
+                                color: chartColor,
+                                values: chartValues,
+                                dates: chartDates,
+                                unit: disease == 'hypertension' ? 'mmHg' : 'mg/dL',
+                              )
+                            : _CreativeChartEmpty(color: chartColor),
                   ),
                   const SizedBox(height: 8),
                   if (hasChart)
@@ -486,80 +587,139 @@ class _ProgressScreenState extends State<ProgressScreen> {
                 fontWeight: FontWeight.w800,
               ),
             ),
-            const SizedBox(height: 10),
-            ListView.separated(
+            const SizedBox(height: 16),
+            ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: baselines.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final entry = baselines[index];
-                return InkWell(
-                  onTap: () => _showBaselineDetail(entry),
-                  borderRadius: BorderRadius.circular(22),
-                  child: AppCard(
-                    padding: 16,
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: AppColors.tint(AppColors.primary),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.analytics_rounded,
-                            color: AppColors.primary,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                formatLongDate(entry.date),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 14,
+                final isLatest = index == 0;
+                final isLast = index == baselines.length - 1;
+                
+                return IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SizedBox(
+                        width: 24,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Positioned(
+                              top: 20,
+                              bottom: 0,
+                              child: Container(
+                                width: 2,
+                                color: isLast 
+                                  ? Colors.transparent 
+                                  : AppColors.of(context).line,
+                              ),
+                            ),
+                            Positioned(
+                              top: 14,
+                              child: Container(
+                                width: 12,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  color: isLatest ? AppColors.primary : AppColors.of(context).muted.withValues(alpha: 0.4),
+                                  shape: BoxShape.circle,
+                                  border: isLatest ? Border.all(
+                                    color: AppColors.primary.withValues(alpha: 0.2),
+                                    width: 4,
+                                    strokeAlign: BorderSide.strokeAlignOutside,
+                                  ) : null,
                                 ),
                               ),
-                              const SizedBox(height: 6),
-                              Wrap(
-                                spacing: 12,
-                                runSpacing: 4,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: InkWell(
+                            onTap: () => _showBaselineDetail(entry),
+                            borderRadius: BorderRadius.circular(22),
+                            child: AppCard(
+                              padding: 16,
+                              child: Row(
                                 children: [
-                                  if (entry.bloodSugar != null)
-                                    _buildBaselineSmallStat(
-                                      'Gula Darah:',
-                                      '${entry.bloodSugar} mg/dL',
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              formatLongDate(entry.date),
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w800,
+                                                fontSize: 13.5,
+                                              ),
+                                            ),
+                                            if (isLatest)
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.primary.withValues(alpha: 0.1),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                                child: const Text(
+                                                  'Terbaru',
+                                                  style: TextStyle(
+                                                    color: AppColors.primary,
+                                                    fontWeight: FontWeight.w800,
+                                                    fontSize: 9,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Wrap(
+                                          spacing: 12,
+                                          runSpacing: 6,
+                                          children: [
+                                            if (entry.bloodSugar != null)
+                                              _buildBaselineSmallStat(
+                                                'Gula Darah:',
+                                                '${entry.bloodSugar} mg/dL',
+                                              ),
+                                            if (entry.systolic != null && entry.diastolic != null)
+                                              _buildBaselineSmallStat(
+                                                'TD:',
+                                                '${entry.systolic}/${entry.diastolic} mmHg',
+                                              ),
+                                            if (entry.weight != null)
+                                              _buildBaselineSmallStat(
+                                                'Berat:',
+                                                '${entry.weight} kg',
+                                              ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
-                                  if (entry.systolic != null && entry.diastolic != null)
-                                    _buildBaselineSmallStat(
-                                      'TD:',
-                                      '${entry.systolic}/${entry.diastolic} mmHg',
-                                    ),
-                                  if (entry.weight != null)
-                                    _buildBaselineSmallStat(
-                                      'Berat:',
-                                      '${entry.weight} kg',
-                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: AppColors.of(context).muted,
+                                  ),
                                 ],
                               ),
-                            ],
+                            ),
                           ),
                         ),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          color: AppColors.of(context).muted,
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 );
               },
             ),
+            const SizedBox(height: 24),
           ],
         ],
       ),
@@ -572,15 +732,25 @@ class _ProgressScreenState extends State<ProgressScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.tint(AppColors.primary).withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: c.line),
-        boxShadow: const [
+        color: c.surface,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.primary.withValues(alpha: 0.12),
+            AppColors.primary.withValues(alpha: 0.02),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.25),
+          width: 1.5,
+        ),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x18000000),
-            blurRadius: 24,
-            offset: Offset(0, 12),
-            spreadRadius: -4,
+            color: AppColors.primary.withValues(alpha: 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -590,69 +760,104 @@ class _ProgressScreenState extends State<ProgressScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Baseline Aktif Saat Ini',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 15,
-                  color: AppColors.primary,
-                ),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.shield_rounded,
+                      color: AppColors.primary,
+                      size: 16,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Baseline Aktif Saat Ini',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14.5,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.primary,
                   borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    )
+                  ],
                 ),
                 child: const Text(
                   'Aktif',
                   style: TextStyle(
                     color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 10,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Ditetapkan pada ${formatLongDate(entry.date)}',
-            style: TextStyle(
-              color: AppColors.of(context).muted,
-              fontSize: 11.5,
-              fontWeight: FontWeight.w500,
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.only(left: 30),
+            child: Text(
+              'Ditetapkan pada ${formatLongDate(entry.date)}',
+              style: TextStyle(
+                color: AppColors.of(context).muted,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              if (entry.bloodSugar != null)
-                _buildLatestBaselineItem(
-                  icon: Icons.water_drop_rounded,
-                  color: AppColors.primary,
-                  label: 'Gula Darah',
-                  value: '${entry.bloodSugar}',
-                  unit: 'mg/dL',
-                ),
-              if (entry.systolic != null && entry.diastolic != null)
-                _buildLatestBaselineItem(
-                  icon: Icons.monitor_heart_rounded,
-                  color: AppColors.pink,
-                  label: 'Tekanan Darah',
-                  value: '${entry.systolic}/${entry.diastolic}',
-                  unit: 'mmHg',
-                ),
-              if (entry.weight != null)
-                _buildLatestBaselineItem(
-                  icon: Icons.scale_rounded,
-                  color: AppColors.violet,
-                  label: 'Berat Badan',
-                  value: '${entry.weight}',
-                  unit: 'kg',
-                ),
-            ],
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+            decoration: BoxDecoration(
+              color: c.surface.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: c.line.withValues(alpha: 0.5)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                if (entry.bloodSugar != null)
+                  _buildLatestBaselineItem(
+                    icon: Icons.water_drop_rounded,
+                    color: AppColors.primary,
+                    label: 'Gula Darah',
+                    value: '${entry.bloodSugar}',
+                    unit: 'mg/dL',
+                  ),
+                if (entry.systolic != null && entry.diastolic != null)
+                  _buildLatestBaselineItem(
+                    icon: Icons.monitor_heart_rounded,
+                    color: AppColors.pink,
+                    label: 'Tekanan Darah',
+                    value: '${entry.systolic}/${entry.diastolic}',
+                    unit: 'mmHg',
+                  ),
+                if (entry.weight != null)
+                  _buildLatestBaselineItem(
+                    icon: Icons.scale_rounded,
+                    color: AppColors.violet,
+                    label: 'Berat Badan',
+                    value: '${entry.weight}',
+                    unit: 'kg',
+                  ),
+              ],
+            ),
           ),
         ],
       ),
@@ -671,7 +876,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.tint(color),
+            color: color.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: color, size: 20),
@@ -1179,5 +1384,354 @@ class _ProgressScreenState extends State<ProgressScreen> {
       },
     );
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Creative Custom Widgets for Health Progress Screen
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _RangeSelector extends StatelessWidget {
+  const _RangeSelector({
+    required this.selectedIndex,
+    required this.onChanged,
+  });
+
+  final int selectedIndex;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    return Container(
+      height: 32,
+      decoration: BoxDecoration(
+        color: colors.elevated,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.line),
+      ),
+      padding: const EdgeInsets.all(2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < 3; i++)
+            GestureDetector(
+              onTap: () => onChanged(i),
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: selectedIndex == i ? colors.surface : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: selectedIndex == i
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Text(
+                  const ['7 Hari', '30 Hari', 'Semua'][i],
+                  style: TextStyle(
+                    color: selectedIndex == i ? colors.text : colors.muted,
+                    fontSize: 11,
+                    fontWeight: selectedIndex == i ? FontWeight.w700 : FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgressStatCard extends StatelessWidget {
+  const _ProgressStatCard({
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.icon,
+    this.metricIndex = 1,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+  final IconData icon;
+  final int metricIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    
+    // Parse value and unit dynamically to look extremely neat
+    String displayValue = value;
+    String? displayUnit;
+    
+    if (value != '—') {
+      if (value.endsWith(' mg/dL')) {
+        displayValue = value.replaceAll(' mg/dL', '');
+        displayUnit = 'mg/dL';
+      } else if (value.endsWith(' kg')) {
+        displayValue = value.replaceAll(' kg', '');
+        displayUnit = 'kg';
+      } else if (value.endsWith('%')) {
+        displayValue = value.replaceAll('%', '');
+        displayUnit = '%';
+      } else if (value.endsWith(' hari')) {
+        displayValue = value.replaceAll(' hari', '');
+        displayUnit = 'hari';
+      } else {
+        // Appends units for raw numbers
+        if (label != 'Tren') {
+          if (metricIndex == 1) displayUnit = 'mg/dL';
+          if (metricIndex == 2) displayUnit = 'mmHg';
+          if (metricIndex == 3) displayUnit = 'kg';
+        }
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: color.withValues(alpha: 0.18),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+            spreadRadius: -2,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 14,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: colors.muted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  displayValue,
+                  style: TextStyle(
+                    color: colors.text,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                if (displayUnit != null) ...[
+                  const SizedBox(width: 3),
+                  Text(
+                    displayUnit,
+                    style: TextStyle(
+                      color: colors.muted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CreativeChartEmpty extends StatelessWidget {
+  const _CreativeChartEmpty({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: colors.elevated.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colors.line),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _GhostChartPainter(color: color),
+              ),
+            ),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.08),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: color.withValues(alpha: 0.1),
+                            blurRadius: 16,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.bar_chart_rounded,
+                        color: color,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Butuh Catatan Tambahan',
+                      style: TextStyle(
+                        color: colors.text,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Butuh minimal 2 catatan untuk menampilkan grafik tren harian Anda.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: colors.muted,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GhostChartPainter extends CustomPainter {
+  const _GhostChartPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    final w = size.width;
+    final h = size.height;
+
+    // Draw horizontal grid lines
+    paint.color = color.withValues(alpha: 0.06);
+    for (var i = 1; i <= 3; i++) {
+      final y = h * (i / 4);
+      canvas.drawLine(Offset(0, y), Offset(w, y), paint);
+    }
+
+    // Draw vertical dotted line grid
+    for (var i = 1; i <= 6; i++) {
+      final x = w * (i / 7);
+      _drawDottedLine(canvas, Offset(x, 0), Offset(x, h), color.withValues(alpha: 0.04));
+    }
+
+    // Draw curvy dashed ghost chart line
+    final path = Path();
+    path.moveTo(0, h * 0.7);
+    path.cubicTo(w * 0.2, h * 0.8, w * 0.3, h * 0.2, w * 0.5, h * 0.5);
+    path.cubicTo(w * 0.7, h * 0.8, w * 0.85, h * 0.25, w, h * 0.4);
+
+    final linePaint = Paint()
+      ..color = color.withValues(alpha: 0.15)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round;
+
+    _drawDashedPath(canvas, path, linePaint);
+  }
+
+  void _drawDottedLine(Canvas canvas, Offset p1, Offset p2, Color color) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.0;
+    const double dashHeight = 4, dashSpace = 4;
+    double startY = p1.dy;
+    while (startY < p2.dy) {
+      canvas.drawLine(Offset(p1.dx, startY), Offset(p1.dx, startY + dashHeight), paint);
+      startY += dashHeight + dashSpace;
+    }
+  }
+
+  void _drawDashedPath(Canvas canvas, Path path, Paint paint) {
+    for (final pathMetric in path.computeMetrics()) {
+      double distance = 0.0;
+      const double dashLength = 8.0;
+      const double spaceLength = 6.0;
+      while (distance < pathMetric.length) {
+        final length = math.min(dashLength, pathMetric.length - distance);
+        final extract = pathMetric.extractPath(distance, distance + length);
+        canvas.drawPath(extract, paint);
+        distance += dashLength + spaceLength;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _GhostChartPainter oldDelegate) => oldDelegate.color != color;
 }
 

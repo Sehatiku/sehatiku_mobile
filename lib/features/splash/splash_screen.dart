@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key, required this.onContinue});
-
-  final VoidCallback onContinue;
+  const SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -28,10 +26,8 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: widget.onContinue,
-      child: Scaffold(
-        body: Container(
+    return Scaffold(
+      body: Container(
           key: const ValueKey('splash'),
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -170,7 +166,7 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
               ),
 
-              // Bottom Loader & Hint
+              // Bottom Loader
               Positioned(
                 bottom: 64,
                 left: 0,
@@ -186,23 +182,12 @@ class _SplashScreenState extends State<SplashScreen>
                         valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    Text(
-                      'Ketuk untuk lanjut',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
                   ],
                 ),
               ),
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 }

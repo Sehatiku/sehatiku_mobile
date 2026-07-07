@@ -909,7 +909,7 @@ class _RecordScreenState extends State<RecordScreen> {
               GestureDetector(
                 onTap: _isLocked ? null : () => adjust(-step),
                 child: Container(
-                  width: 38,
+                  width: 32,
                   height: 38,
                   decoration: BoxDecoration(
                     color: colors.elevated,
@@ -919,7 +919,7 @@ class _RecordScreenState extends State<RecordScreen> {
                   child: Icon(Icons.remove_rounded, color: colors.text, size: 16),
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 4),
               Expanded(
                 child: TextField(
                   enabled: !_isLocked,
@@ -928,7 +928,7 @@ class _RecordScreenState extends State<RecordScreen> {
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   style: TextStyle(
                     color: colors.text,
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w800,
                   ),
                   textAlign: TextAlign.center,
@@ -937,13 +937,13 @@ class _RecordScreenState extends State<RecordScreen> {
                     hintText: hint,
                     hintStyle: TextStyle(
                       color: colors.muted,
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.w800,
                     ),
                     filled: true,
                     fillColor: colors.elevated,
                     contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 10,
+                      horizontal: 2,
                       vertical: 9,
                     ),
                     border: OutlineInputBorder(
@@ -961,11 +961,11 @@ class _RecordScreenState extends State<RecordScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 4),
               GestureDetector(
                 onTap: _isLocked ? null : () => adjust(step),
                 child: Container(
-                  width: 38,
+                  width: 32,
                   height: 38,
                   decoration: BoxDecoration(
                     color: colors.elevated,
@@ -1905,6 +1905,18 @@ class _RecordScreenState extends State<RecordScreen> {
     return Row(
       children: [
         _DatePill(
+          label: 'Kemarin',
+          selected: isYesterday,
+          onTap: () {
+            if (_selectedDate != yesterday) {
+              setState(() => _selectedDate = yesterday);
+              _loadRecordForDate(yesterday);
+            }
+          },
+          colors: colors,
+        ),
+        const SizedBox(width: 8),
+        _DatePill(
           label: 'Hari Ini',
           selected: isToday,
           onTap: () {
@@ -1912,18 +1924,6 @@ class _RecordScreenState extends State<RecordScreen> {
               setState(() => _selectedDate = today);
               _loadRecordForDate(today);
               _syncTodayRecord();
-            }
-          },
-          colors: colors,
-        ),
-        const SizedBox(width: 8),
-        _DatePill(
-          label: 'Kemarin',
-          selected: isYesterday,
-          onTap: () {
-            if (_selectedDate != yesterday) {
-              setState(() => _selectedDate = yesterday);
-              _loadRecordForDate(yesterday);
             }
           },
           colors: colors,
@@ -2006,7 +2006,11 @@ class _RecordScreenState extends State<RecordScreen> {
             switchOutCurve: Curves.easeOut,
             child: IgnorePointer(
               ignoring: _isLocked,
-              child: _buildActiveTabContent(colors),
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 200),
+                opacity: _isLocked ? 0.62 : 1.0,
+                child: _buildActiveTabContent(colors),
+              ),
             ),
           ),
           const SizedBox(height: 20),

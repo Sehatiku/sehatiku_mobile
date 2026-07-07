@@ -53,13 +53,8 @@ class _SehatikuAppState extends State<SehatikuApp> {
 
   void _applyStatusBar(bool dark) {
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
       statusBarBrightness: dark ? Brightness.dark : Brightness.light,
       statusBarIconBrightness: dark ? Brightness.light : Brightness.dark,
-      systemNavigationBarColor:
-          dark ? AppColors.dark.background : AppColors.light.background,
-      systemNavigationBarIconBrightness:
-          dark ? Brightness.light : Brightness.dark,
     ));
   }
 
@@ -69,100 +64,45 @@ class _SehatikuAppState extends State<SehatikuApp> {
     super.dispose();
   }
 
-  ThemeData _buildDark() => _buildTheme(
-        brightness: Brightness.dark,
-        colors: AppColors.dark,
-      );
+  ThemeData _buildDark() => ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.dark,
+    scaffoldBackgroundColor: AppColors.dark.background,
+    colorScheme: ColorScheme.fromSeed(
+      brightness: Brightness.dark,
+      seedColor: AppColors.primary,
+      primary: AppColors.primary,
+      secondary: AppColors.green,
+      surface: AppColors.dark.surface,
+      onSurface: AppColors.dark.text,
+      onPrimary: Colors.white,
+    ),
+    fontFamily: 'sans',
+    switchTheme: _switchTheme(AppColors.green),
+    textSelectionTheme: _textSelection(),
+    inputDecorationTheme: _inputTheme(AppColors.dark),
+    snackBarTheme: _snackTheme(AppColors.dark),
+  );
 
-  ThemeData _buildLight() => _buildTheme(
-        brightness: Brightness.light,
-        colors: AppColors.light,
-      );
-
-  ThemeData _buildTheme({
-    required Brightness brightness,
-    required AppColors colors,
-  }) {
-    final base = ThemeData(
-      useMaterial3: true,
-      brightness: brightness,
-      colorScheme: ColorScheme.fromSeed(
-        brightness: brightness,
-        seedColor: AppColors.primary,
-        primary: AppColors.primary,
-        secondary: AppColors.green,
-        tertiary: AppColors.violet,
-        surface: colors.surface,
-        onSurface: colors.text,
-        onPrimary: Colors.white,
-        error: AppColors.red,
-      ),
-    );
-
-    return base.copyWith(
-      scaffoldBackgroundColor: colors.background,
-      cardColor: colors.surface,
-      appBarTheme: AppBarTheme(
-        backgroundColor: colors.background,
-        foregroundColor: colors.text,
-        elevation: 0,
-        centerTitle: false,
-        surfaceTintColor: Colors.transparent,
-        scrolledUnderElevation: 0,
-      ),
-      cardTheme: CardThemeData(
-        color: colors.surface,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: BorderSide(color: colors.line),
-        ),
-      ),
-      dividerTheme: DividerThemeData(color: colors.line, thickness: 1),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-        ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: colors.text,
-          side: BorderSide(color: colors.line),
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-        ),
-      ),
-      textTheme: base.textTheme.apply(
-        bodyColor: colors.text,
-        displayColor: colors.text,
-      ),
-      switchTheme: _switchTheme(AppColors.green),
-      textSelectionTheme: _textSelection(),
-      inputDecorationTheme: _inputTheme(colors),
-      snackBarTheme: _snackTheme(colors),
-      chipTheme: ChipThemeData(
-        backgroundColor: colors.elevated,
-        disabledColor: colors.elevated,
-        selectedColor: AppColors.primary.withValues(alpha: .14),
-        labelStyle: TextStyle(
-          color: colors.text,
-          fontWeight: FontWeight.w600,
-        ),
-        side: BorderSide(color: colors.line),
-        shape: const StadiumBorder(),
-      ),
-    );
-  }
+  ThemeData _buildLight() => ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.light,
+    scaffoldBackgroundColor: AppColors.light.background,
+    colorScheme: ColorScheme.fromSeed(
+      brightness: Brightness.light,
+      seedColor: AppColors.primary,
+      primary: AppColors.primary,
+      secondary: AppColors.green,
+      surface: AppColors.light.surface,
+      onSurface: AppColors.light.text,
+      onPrimary: Colors.white,
+    ),
+    fontFamily: 'sans',
+    switchTheme: _switchTheme(AppColors.green),
+    textSelectionTheme: _textSelection(),
+    inputDecorationTheme: _inputTheme(AppColors.light),
+    snackBarTheme: _snackTheme(AppColors.light),
+  );
 
   SwitchThemeData _switchTheme(Color active) => SwitchThemeData(
     thumbColor: WidgetStateProperty.resolveWith(

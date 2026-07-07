@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:sehatiku_mobile/core/core.dart';
 import 'package:sehatiku_mobile/data/models/dashboard_models.dart';
@@ -282,98 +283,107 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final latest = store.latest;
     final today = store.today;
-    final sortedRecords = store.records;
-
-    final Set<DateTime> recordDates = sortedRecords
-        .map((r) => DateTime(r.date.year, r.date.month, r.date.day))
-        .toSet();
-
-    final todayMidnight = DateTime(now.year, now.month, now.day);
-    final yesterdayMidnight = todayMidnight.subtract(const Duration(days: 1));
-
-    final bool loggedToday = recordDates.contains(todayMidnight);
-    final bool loggedYesterday = recordDates.contains(yesterdayMidnight);
-
-    int streakDays = 0;
-    if (loggedToday || loggedYesterday) {
-      DateTime currentDay = loggedToday ? todayMidnight : yesterdayMidnight;
-      while (recordDates.contains(currentDay)) {
-        streakDays++;
-        currentDay = currentDay.subtract(const Duration(days: 1));
-      }
-    }
 
     return RefreshIndicator(
       onRefresh: _fetch,
       child: AppScroll(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _Header(
-              firstName: firstName,
-              date: now,
-              colors: colors,
-              unreadCount: _unreadCount,
-              streakDays: streakDays,
-              loggedToday: loggedToday,
-              onNotification: () => widget.onView(MainView.notifikasi),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header ──────────────────────────────────────────────────────────
+          _Header(
+            firstName: firstName,
+            date: now,
+            colors: colors,
+            unreadCount: _unreadCount,
+            onNotification: () => widget.onView(MainView.notifikasi),
+          ),
+          const SizedBox(height: 22),
+
+          if (store.hasPendingSync) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.amber.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.amber.withValues(alpha: .3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.sync_problem_rounded,
+                    color: AppColors.amber,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Beberapa catatan belum tersinkronisasi ke server.',
+                      style: TextStyle(
+                        color: colors.text,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
+          ],
 
-            if (store.hasPendingSync) ...[
-              _StatusBanner(
-                icon: Icons.sync_problem_rounded,
-                accent: AppColors.amber,
-                title: 'Sinkronisasi tertunda',
-                message: 'Beberapa catatan belum tersinkronisasi ke server.',
-              ),
-              const SizedBox(height: 14),
-            ],
-
-            if (_todayStatus != null && (_todayStatus!.daysSinceLastLog == null || _todayStatus!.daysSinceLastLog! >= 2)) ...[
-              _MissedLogsBanner(
-                status: _todayStatus!,
-                colors: colors,
-                onTap: () {
-                  final DateTime targetDate;
-                  if (_todayStatus!.daysSinceLastLog == null) {
-                    targetDate = HealthRecord.dayOf(DateTime.now());
+          if (_todayStatus != null && (_todayStatus!.daysSinceLastLog == null || _todayStatus!.daysSinceLastLog! >= 2)) ...[
+            _MissedLogsBanner(
+              status: _todayStatus!,
+              colors: colors,
+              onTap: () {
+                final DateTime targetDate;
+                if (_todayStatus!.daysSinceLastLog == null) {
+                  targetDate = HealthRecord.dayOf(DateTime.now());
+                } else {
+                  final lastLogDate = DateTime.tryParse(_todayStatus!.lastLoggedAt ?? '');
+                  if (lastLogDate != null) {
+                    targetDate = HealthRecord.dayOf(lastLogDate).add(const Duration(days: 1));
                   } else {
-                    final lastLogDate = DateTime.tryParse(_todayStatus!.lastLoggedAt ?? '');
-                    if (lastLogDate != null) {
-                      targetDate = HealthRecord.dayOf(lastLogDate).add(const Duration(days: 1));
-                    } else {
-                      targetDate = HealthRecord.dayOf(DateTime.now().subtract(const Duration(days: 1)));
-                    }
+                    targetDate = HealthRecord.dayOf(DateTime.now().subtract(const Duration(days: 1)));
                   }
-                  if (widget.onViewRecordWithDate != null) {
-                    widget.onViewRecordWithDate!(targetDate);
-                  } else {
-                    widget.onView(MainView.catatan);
-                  }
-                },
-              ),
-              const SizedBox(height: 14),
-            ],
+                }
+                if (widget.onViewRecordWithDate != null) {
+                  widget.onViewRecordWithDate!(targetDate);
+                } else {
+                  widget.onView(MainView.catatan);
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
 
-            if (_loading)
-              const _LoadingCard()
-            else if (_dashboard != null && _dashboard!.risk.scoredAt != null)
-              InkWell(
-                onTap: () => widget.onView(MainView.ai),
-                borderRadius: BorderRadius.circular(28),
-                child: _ApiRiskCard(dashboard: _dashboard!),
-              )
-            else
-              InkWell(
-                onTap: () => widget.onView(MainView.ai),
-                borderRadius: BorderRadius.circular(28),
-                child: HealthScoreCard(record: latest),
-              ),
-            const SizedBox(height: 18),
+          // ── AI Risk Card (from API) or local score card ──────────────────────
+          // Only show _ApiRiskCard when the ML model has actually produced a
+          // score (scoredAt != null). When scoredAt is null the backend returns
+          // score=0 and risk_label="" which would crash on riskLabel[0].
+          if (_loading)
+            const _LoadingCard()
+          else if (_dashboard != null && _dashboard!.risk.scoredAt != null)
+            InkWell(
+              onTap: () => widget.onView(MainView.ai),
+              borderRadius: BorderRadius.circular(28),
+              child: _ApiRiskCard(dashboard: _dashboard!),
+            )
+          else
+            InkWell(
+              onTap: () => widget.onView(MainView.ai),
+              borderRadius: BorderRadius.circular(28),
+              child: HealthScoreCard(record: latest),
+            ),
+          const SizedBox(height: 20),
 
-            _QuickActionsRow(onView: widget.onView),
-            const SizedBox(height: 22),
+          // ── Aksi Cepat (Quick Actions) ───────────────────────────────────────
+          _QuickActionsRow(onView: widget.onView),
+          const SizedBox(height: 24),
 
           // ── Latest measurements (from API) ──────────────────────────────────
           if (_dashboard != null) ...[
@@ -443,12 +453,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ],
 
-            const SizedBox(height: 14),
-            _StreakCard(
-              streakDays: streakDays,
-              recordDates: recordDates,
-              loggedToday: loggedToday,
-            ),
+          // ── Streak & logging (calculated from local + merged records) ────────
+          () {
+            final store = HealthScope.of(context);
+            final sortedRecords = store.records;
+            
+            final Set<DateTime> recordDates = sortedRecords
+                .map((r) => DateTime(r.date.year, r.date.month, r.date.day))
+                .toSet();
+
+            final now = DateTime.now();
+            final todayMidnight = DateTime(now.year, now.month, now.day);
+            final yesterdayMidnight = todayMidnight.subtract(const Duration(days: 1));
+            
+            final bool loggedToday = recordDates.contains(todayMidnight);
+            final bool loggedYesterday = recordDates.contains(yesterdayMidnight);
+
+            int streakDays = 0;
+            if (loggedToday || loggedYesterday) {
+              DateTime currentDay = loggedToday ? todayMidnight : yesterdayMidnight;
+              while (recordDates.contains(currentDay)) {
+                streakDays++;
+                currentDay = currentDay.subtract(const Duration(days: 1));
+              }
+            }
+
+            return Column(
+              children: [
+                const SizedBox(height: 14),
+                _StreakCard(
+                  streakDays: streakDays,
+                  recordDates: recordDates,
+                  loggedToday: loggedToday,
+                ),
+              ],
+            );
+          }(),
           const SizedBox(height: 28),
 
           // ── AI insight banner ────────────────────────────────────────────────
@@ -529,8 +569,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
           // ── Education teaser ─────────────────────────────────────────────────
           _EducationTeaser(onView: widget.onView),
-          ],
-        ),
+          const SizedBox(height: 40),
+        ],
+      ),
     ));
   }
 }
@@ -546,161 +587,145 @@ class _QuickActionsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-
-    return AppCard(
-      padding: 16,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Ruang Cepat',
-                  style: TextStyle(
-                    color: colors.text,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              Text(
-                'Akses dalam 1 ketuk',
-                style: TextStyle(
-                  color: colors.muted,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+    return Row(
+      children: [
+        Expanded(
+          child: _SmallActionItem(
+            icon: Icons.edit_note_rounded,
+            label: 'Catat',
+            gradient: const [AppColors.primary, AppColors.cyan],
+            onTap: () => onView(MainView.catatan),
           ),
-          const SizedBox(height: 14),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 2.15,
-            children: [
-              _SmallActionItem(
-                icon: Icons.edit_note_rounded,
-                label: 'Catat',
-                subtitle: 'Isi data harian',
-                gradient: const [AppColors.primary, AppColors.cyan],
-                onTap: () => onView(MainView.catatan),
-              ),
-              _SmallActionItem(
-                icon: Icons.history_rounded,
-                label: 'Riwayat',
-                subtitle: 'Lihat pola data',
-                gradient: const [AppColors.green, AppColors.lime],
-                onTap: () => onView(MainView.riwayat),
-              ),
-              _SmallActionItem(
-                icon: Icons.menu_book_rounded,
-                label: 'Edukasi',
-                subtitle: 'Baca tips singkat',
-                gradient: const [AppColors.violet, AppColors.cyan],
-                onTap: () => onView(MainView.edukasi),
-              ),
-              _SmallActionItem(
-                icon: Icons.medical_services_rounded,
-                label: 'Dokter',
-                subtitle: 'Cari bantuan',
-                gradient: const [AppColors.pink, Color(0xFFFF9472)],
-                onTap: () => onView(MainView.dokter),
-              ),
-            ],
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _SmallActionItem(
+            icon: Icons.history_rounded,
+            label: 'Riwayat',
+            gradient: const [AppColors.green, AppColors.lime],
+            onTap: () => onView(MainView.riwayat),
           ),
-        ],
-      ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _SmallActionItem(
+            icon: Icons.menu_book_rounded,
+            label: 'Edukasi',
+            gradient: const [AppColors.violet, AppColors.cyan],
+            onTap: () => onView(MainView.edukasi),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _SmallActionItem(
+            icon: Icons.medical_services_rounded,
+            label: 'Dokter',
+            gradient: const [AppColors.pink, Color(0xFFFF9472)],
+            onTap: () => onView(MainView.dokter),
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _SmallActionItem extends StatelessWidget {
+class _SmallActionItem extends StatefulWidget {
   const _SmallActionItem({
     required this.icon,
     required this.label,
-    required this.subtitle,
     required this.gradient,
     required this.onTap,
   });
 
   final IconData icon;
   final String label;
-  final String subtitle;
   final List<Color> gradient;
   final VoidCallback onTap;
 
   @override
+  State<_SmallActionItem> createState() => _SmallActionItemState();
+}
+
+class _SmallActionItemState extends State<_SmallActionItem> {
+  double _scale = 1.0;
+
+  @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          color: colors.background,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: colors.line),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: gradient,
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _scale = 0.92),
+      onTapUp: (_) {
+        setState(() => _scale = 1.0);
+        HapticFeedback.lightImpact();
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _scale = 1.0),
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOutCubic,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: widget.gradient,
+                  ),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.24),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: widget.gradient.first.withValues(alpha: .28),
+                      blurRadius: 14,
+                      offset: const Offset(0, 7),
+                    ),
+                  ],
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: gradient.first.withValues(alpha: .20),
-                    blurRadius: 10,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Icon(icon, color: Colors.white, size: 22),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: colors.text,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Glassy background circle behind icon
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.14),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          width: 1,
+                        ),
+                      ),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      color: colors.muted,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+                    Icon(widget.icon, color: Colors.white, size: 24),
+                  ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 8),
+              Text(
+                widget.label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: colors.text,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 11.5,
+                  letterSpacing: -0.2,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -717,8 +742,6 @@ class _Header extends StatelessWidget {
     required this.date,
     required this.colors,
     required this.unreadCount,
-    required this.streakDays,
-    required this.loggedToday,
     required this.onNotification,
   });
 
@@ -726,219 +749,64 @@ class _Header extends StatelessWidget {
   final DateTime date;
   final AppColors colors;
   final int unreadCount;
-  final int streakDays;
-  final bool loggedToday;
   final VoidCallback onNotification;
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      padding: 18,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Row(
+      children: [
+        Image.asset(
+          'assets/images/logo3.png',
+          width: 52,
+          height: 52,
+          fit: BoxFit.contain,
+        ),
+        const SizedBox(width: 13),
+        Expanded(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const BrandLogo(size: 52),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Hallo $firstName',
-                      style: TextStyle(
-                        color: colors.text,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        height: 1.05,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Hari ini fokus pada ritme kecil yang konsisten.',
-                      style: TextStyle(
-                        color: colors.muted,
-                        fontSize: 12.5,
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      formatLongDate(date),
-                      style: TextStyle(
-                        color: colors.text,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Stack(
-                children: [
-                  IconCircle(
-                    icon: Icons.notifications_rounded,
-                    onTap: onNotification,
-                  ),
-                  if (unreadCount > 0)
-                    Positioned(
-                      top: 10,
-                      right: 11,
-                      child: Container(
-                        width: 9,
-                        height: 9,
-                        decoration: BoxDecoration(
-                          color: AppColors.red,
-                          shape: BoxShape.circle,
-                          border:
-                              Border.all(color: colors.background, width: 2),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _HeaderChip(
-                icon: loggedToday
-                    ? Icons.check_circle_rounded
-                    : Icons.pending_actions_rounded,
-                label: loggedToday ? 'Sudah catat' : 'Belum catat',
-                accent: loggedToday ? AppColors.green : AppColors.amber,
-                colors: colors,
-              ),
-              _HeaderChip(
-                icon: Icons.local_fire_department_rounded,
-                label: streakDays > 0
-                    ? 'Streak $streakDays hari'
-                    : 'Mulai streak hari ini',
-                accent: streakDays > 0 ? AppColors.orange : AppColors.violet,
-                colors: colors,
-              ),
-              _HeaderChip(
-                icon: Icons.notifications_active_rounded,
-                label: unreadCount > 0 ? '$unreadCount notifikasi' : 'Inbox bersih',
-                accent: unreadCount > 0 ? AppColors.primary : colors.muted,
-                colors: colors,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeaderChip extends StatelessWidget {
-  const _HeaderChip({
-    required this.icon,
-    required this.label,
-    required this.accent,
-    required this.colors,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color accent;
-  final AppColors colors;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: .10),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: accent.withValues(alpha: .18)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: accent),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              color: colors.text,
-              fontSize: 11.5,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusBanner extends StatelessWidget {
-  const _StatusBanner({
-    required this.icon,
-    required this.accent,
-    required this.title,
-    required this.message,
-  });
-
-  final IconData icon;
-  final Color accent;
-  final String title;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: .10),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: accent.withValues(alpha: .20)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: .14),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: accent, size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
+              Text(
+                'Hallo $firstName 👋',
+                style: TextStyle(
                     color: colors.text,
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  message,
-                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                formatLongDate(date),
+                style: TextStyle(
                     color: colors.muted,
-                    fontSize: 11.8,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+        ),
+        Stack(
+          children: [
+            IconCircle(
+              icon: Icons.notifications_rounded,
+              onTap: onNotification,
+            ),
+            if (unreadCount > 0)
+              Positioned(
+                top: 10,
+                right: 11,
+                child: Container(
+                  width: 9,
+                  height: 9,
+                  decoration: BoxDecoration(
+                    color: AppColors.red,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: colors.background, width: 2),
                   ),
                 ),
-              ],
-            ),
-          ),
-        ],
-      ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -1187,10 +1055,18 @@ class _ChecklistItem extends StatelessWidget {
 // New: Education Teaser
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _EducationTeaser extends StatelessWidget {
+class _EducationTeaser extends StatefulWidget {
   const _EducationTeaser({required this.onView});
 
   final ValueChanged<MainView> onView;
+
+  @override
+  State<_EducationTeaser> createState() => _EducationTeaserState();
+}
+
+class _EducationTeaserState extends State<_EducationTeaser> {
+  late final PageController _pageController;
+  int _currentPage = 0;
 
   static const _topics = [
     _EduTopic(
@@ -1224,6 +1100,18 @@ class _EducationTeaser extends StatelessWidget {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(viewportFraction: 0.89);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1234,7 +1122,7 @@ class _EducationTeaser extends StatelessWidget {
             const Expanded(child: SectionTitle(title: 'Tips Kesehatan')),
             const SizedBox(width: 8),
             GestureDetector(
-              onTap: () => onView(MainView.edukasi),
+              onTap: () => widget.onView(MainView.edukasi),
               child: const Text(
                 'Lihat Semua',
                 style: TextStyle(
@@ -1246,18 +1134,56 @@ class _EducationTeaser extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 13),
+        const SizedBox(height: 14),
         SizedBox(
-          height: 180,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: _topics.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, i) => _EduCard(
-              topic: _topics[i],
-              onTap: () => onView(MainView.edukasi),
+          height: 202,
+          child: OverflowBox(
+            minWidth: MediaQuery.of(context).size.width,
+            maxWidth: MediaQuery.of(context).size.width,
+            child: PageView.builder(
+              controller: _pageController,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentPage = index;
+                });
+              },
+              itemCount: _topics.length,
+              itemBuilder: (context, i) {
+                final isSelected = _currentPage == i;
+                return AnimatedPadding(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeOutCubic,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: isSelected ? 10 : 16,
+                  ),
+                  child: _EduCard(
+                    topic: _topics[i],
+                    onTap: () => widget.onView(MainView.edukasi),
+                  ),
+                );
+              },
             ),
           ),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(_topics.length, (index) {
+            final isSelected = _currentPage == index;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              height: 7,
+              width: isSelected ? 22 : 7,
+              decoration: BoxDecoration(
+                color: isSelected 
+                  ? AppColors.primary 
+                  : AppColors.of(context).muted.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            );
+          }),
         ),
       ],
     );
@@ -1292,69 +1218,92 @@ class _EduCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 164,
         decoration: BoxDecoration(
-          color: colors.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: colors.line),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
-                color: Color(0x18000000),
-                blurRadius: 20,
-                offset: Offset(0, 8),
-                spreadRadius: -4),
+              color: colors.muted.withValues(alpha: 0.08),
+              blurRadius: 15,
+              offset: const Offset(0, 6),
+            ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(19)),
-              child: Image.network(
-                topic.imageUrl,
-                height: 82,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  height: 82,
-                  color: topic.color.withValues(alpha: .12),
-                  child: Center(
-                    child: Icon(topic.icon, color: topic.color, size: 24),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            children: [
+              // Cover Image
+              Positioned.fill(
+                child: Image.network(
+                  topic.imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: topic.color.withValues(alpha: 0.15),
+                    child: Center(
+                      child: Icon(topic.icon, color: topic.color, size: 36),
+                    ),
                   ),
                 ),
               ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
+              // Dark Gradient Overlay for high text legibility
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.0),
+                        Colors.black.withValues(alpha: 0.2),
+                        Colors.black.withValues(alpha: 0.75),
+                      ],
+                      stops: const [0.0, 0.4, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+              // Category Badge and Title Text
+              Positioned(
+                bottom: 16,
+                left: 16,
+                right: 16,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      topic.category,
-                      style: TextStyle(
-                          color: topic.color,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 10),
-                    ),
-                    const SizedBox(height: 4),
-                    Expanded(
-                      child: Text(
-                        topic.title,
-                        style: TextStyle(
-                            color: colors.text,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 11.5,
-                            height: 1.3),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: topic.color,
+                        borderRadius: BorderRadius.circular(8),
                       ),
+                      child: Text(
+                        topic.category.toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 9,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      topic.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        height: 1.25,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1384,10 +1333,10 @@ class _ApiRiskCard extends StatelessWidget {
       _ => AppColors.green,
     };
 
-    final String statusEmoji = switch (risk.status) {
-      'bahaya' => '⚠️',
-      'waswas' => '⚡',
-      _ => '✅',
+    final IconData statusIcon = switch (risk.status) {
+      'bahaya' => Icons.warning_amber_rounded,
+      'waswas' => Icons.bolt_rounded,
+      _ => Icons.check_circle_rounded,
     };
 
     return Container(
@@ -1463,7 +1412,7 @@ class _ApiRiskCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(statusEmoji, style: const TextStyle(fontSize: 13)),
+                        Icon(statusIcon, color: Colors.white, size: 16),
                         const SizedBox(width: 7),
                         Text(
                           risk.status == 'bahaya'

@@ -269,13 +269,13 @@ class HealthRecord {
   factory HealthRecord.fromJson(Map<String, dynamic> json) {
     return HealthRecord(
       date: dayOf(DateTime.parse(json['date'] as String)),
-      healthScore: json['healthScore'] as int?,
+      healthScore: json['healthScore'] != null ? (json['healthScore'] as num).toInt() : null,
       apiStatus: json['apiStatus'] as String?,
       apiStatusLabel: json['apiStatusLabel'] as String?,
-      bloodSugar: json['bloodSugar'] as int?,
+      bloodSugar: json['bloodSugar'] != null ? (json['bloodSugar'] as num).toInt() : null,
       bloodSugarTag: json['bloodSugarTag'] as String? ?? '',
-      systolic: json['systolic'] as int?,
-      diastolic: json['diastolic'] as int?,
+      systolic: json['systolic'] != null ? (json['systolic'] as num).toInt() : null,
+      diastolic: json['diastolic'] != null ? (json['diastolic'] as num).toInt() : null,
       weight: (json['weight'] as num?)?.toDouble(),
       medicineTaken: json['medicineTaken'] as bool? ?? false,
       medicineName: json['medicineName'] as String? ?? '',
@@ -287,12 +287,12 @@ class HealthRecord {
       // Migrate legacy records that stored activity minutes instead of a flag.
       active30:
           json['active30'] as bool? ??
-          ((json['activityMinutes'] as int?) ?? 0) >= 30,
+          (((json['activityMinutes'] as num?)?.toInt() ?? 0) >= 30),
       activityType: json['activityType'] as String? ?? '',
-      activityMinutes: json['activityMinutes'] as int? ?? 0,
+      activityMinutes: (json['activityMinutes'] as num?)?.toInt() ?? 0,
       sleepHours: (json['sleepHours'] as num?)?.toDouble(),
-      sleepQuality: json['sleepQuality'] as int? ?? 1,
-      stressIndex: json['stressIndex'] as int? ?? 1,
+      sleepQuality: (json['sleepQuality'] as num?)?.toInt() ?? 1,
+      stressIndex: (json['stressIndex'] as num?)?.toInt() ?? 1,
       smoke: json['smoke'] as bool? ?? false,
       alcohol: json['alcohol'] as bool? ?? false,
       note: json['note'] as String? ?? '',
