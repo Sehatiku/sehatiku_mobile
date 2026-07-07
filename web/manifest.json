@@ -1,6 +1,6 @@
 {
-    "name": "sehatiku_mobile",
-    "short_name": "sehatiku_mobile",
+    "name": "Sehatiku",
+    "short_name": "Sehatiku",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
