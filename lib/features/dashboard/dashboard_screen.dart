@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:sehatiku_mobile/core/core.dart';
 import 'package:sehatiku_mobile/data/models/dashboard_models.dart';
@@ -568,6 +569,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
           // ── Education teaser ─────────────────────────────────────────────────
           _EducationTeaser(onView: widget.onView),
+          const SizedBox(height: 40),
         ],
       ),
     ));
@@ -627,7 +629,7 @@ class _QuickActionsRow extends StatelessWidget {
   }
 }
 
-class _SmallActionItem extends StatelessWidget {
+class _SmallActionItem extends StatefulWidget {
   const _SmallActionItem({
     required this.icon,
     required this.label,
@@ -641,49 +643,89 @@ class _SmallActionItem extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_SmallActionItem> createState() => _SmallActionItemState();
+}
+
+class _SmallActionItemState extends State<_SmallActionItem> {
+  double _scale = 1.0;
+
+  @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: gradient,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: gradient.first.withValues(alpha: .22),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _scale = 0.92),
+      onTapUp: (_) {
+        setState(() => _scale = 1.0);
+        HapticFeedback.lightImpact();
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _scale = 1.0),
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOutCubic,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: widget.gradient,
                   ),
-                ],
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.24),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: widget.gradient.first.withValues(alpha: .28),
+                      blurRadius: 14,
+                      offset: const Offset(0, 7),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Glassy background circle behind icon
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.14),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    Icon(widget.icon, color: Colors.white, size: 24),
+                  ],
+                ),
               ),
-              child: Icon(icon, color: Colors.white, size: 24),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: colors.text,
-                fontWeight: FontWeight.w700,
-                fontSize: 12,
+              const SizedBox(height: 8),
+              Text(
+                widget.label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: colors.text,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 11.5,
+                  letterSpacing: -0.2,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1013,10 +1055,18 @@ class _ChecklistItem extends StatelessWidget {
 // New: Education Teaser
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _EducationTeaser extends StatelessWidget {
+class _EducationTeaser extends StatefulWidget {
   const _EducationTeaser({required this.onView});
 
   final ValueChanged<MainView> onView;
+
+  @override
+  State<_EducationTeaser> createState() => _EducationTeaserState();
+}
+
+class _EducationTeaserState extends State<_EducationTeaser> {
+  late final PageController _pageController;
+  int _currentPage = 0;
 
   static const _topics = [
     _EduTopic(
@@ -1050,6 +1100,18 @@ class _EducationTeaser extends StatelessWidget {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(viewportFraction: 0.89);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1060,7 +1122,7 @@ class _EducationTeaser extends StatelessWidget {
             const Expanded(child: SectionTitle(title: 'Tips Kesehatan')),
             const SizedBox(width: 8),
             GestureDetector(
-              onTap: () => onView(MainView.edukasi),
+              onTap: () => widget.onView(MainView.edukasi),
               child: const Text(
                 'Lihat Semua',
                 style: TextStyle(
@@ -1072,18 +1134,56 @@ class _EducationTeaser extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 13),
+        const SizedBox(height: 14),
         SizedBox(
-          height: 180,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: _topics.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, i) => _EduCard(
-              topic: _topics[i],
-              onTap: () => onView(MainView.edukasi),
+          height: 202,
+          child: OverflowBox(
+            minWidth: MediaQuery.of(context).size.width,
+            maxWidth: MediaQuery.of(context).size.width,
+            child: PageView.builder(
+              controller: _pageController,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentPage = index;
+                });
+              },
+              itemCount: _topics.length,
+              itemBuilder: (context, i) {
+                final isSelected = _currentPage == i;
+                return AnimatedPadding(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeOutCubic,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: isSelected ? 10 : 16,
+                  ),
+                  child: _EduCard(
+                    topic: _topics[i],
+                    onTap: () => widget.onView(MainView.edukasi),
+                  ),
+                );
+              },
             ),
           ),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(_topics.length, (index) {
+            final isSelected = _currentPage == index;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              height: 7,
+              width: isSelected ? 22 : 7,
+              decoration: BoxDecoration(
+                color: isSelected 
+                  ? AppColors.primary 
+                  : AppColors.of(context).muted.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            );
+          }),
         ),
       ],
     );
@@ -1118,69 +1218,92 @@ class _EduCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 164,
         decoration: BoxDecoration(
-          color: colors.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: colors.line),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
-                color: Color(0x18000000),
-                blurRadius: 20,
-                offset: Offset(0, 8),
-                spreadRadius: -4),
+              color: colors.muted.withValues(alpha: 0.08),
+              blurRadius: 15,
+              offset: const Offset(0, 6),
+            ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(19)),
-              child: Image.network(
-                topic.imageUrl,
-                height: 82,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  height: 82,
-                  color: topic.color.withValues(alpha: .12),
-                  child: Center(
-                    child: Icon(topic.icon, color: topic.color, size: 24),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            children: [
+              // Cover Image
+              Positioned.fill(
+                child: Image.network(
+                  topic.imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: topic.color.withValues(alpha: 0.15),
+                    child: Center(
+                      child: Icon(topic.icon, color: topic.color, size: 36),
+                    ),
                   ),
                 ),
               ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
+              // Dark Gradient Overlay for high text legibility
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.0),
+                        Colors.black.withValues(alpha: 0.2),
+                        Colors.black.withValues(alpha: 0.75),
+                      ],
+                      stops: const [0.0, 0.4, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+              // Category Badge and Title Text
+              Positioned(
+                bottom: 16,
+                left: 16,
+                right: 16,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      topic.category,
-                      style: TextStyle(
-                          color: topic.color,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 10),
-                    ),
-                    const SizedBox(height: 4),
-                    Expanded(
-                      child: Text(
-                        topic.title,
-                        style: TextStyle(
-                            color: colors.text,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 11.5,
-                            height: 1.3),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: topic.color,
+                        borderRadius: BorderRadius.circular(8),
                       ),
+                      child: Text(
+                        topic.category.toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 9,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      topic.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        height: 1.25,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1210,10 +1333,10 @@ class _ApiRiskCard extends StatelessWidget {
       _ => AppColors.green,
     };
 
-    final String statusEmoji = switch (risk.status) {
-      'bahaya' => '⚠️',
-      'waswas' => '⚡',
-      _ => '✅',
+    final IconData statusIcon = switch (risk.status) {
+      'bahaya' => Icons.warning_amber_rounded,
+      'waswas' => Icons.bolt_rounded,
+      _ => Icons.check_circle_rounded,
     };
 
     return Container(
@@ -1289,7 +1412,7 @@ class _ApiRiskCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(statusEmoji, style: const TextStyle(fontSize: 13)),
+                        Icon(statusIcon, color: Colors.white, size: 16),
                         const SizedBox(width: 7),
                         Text(
                           risk.status == 'bahaya'

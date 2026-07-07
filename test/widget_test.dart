@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:sehatiku_mobile/app/sehatiku_app.dart';
+import 'package:sehatiku_mobile/data/repositories/auth_store.dart';
 import 'package:sehatiku_mobile/data/services/api_client.dart';
 
 void main() {
@@ -99,7 +100,8 @@ void main() {
                 'top_penalties': [
                   'Tekanan darah sistolik tinggi',
                   'Kadar gula darah tinggi'
-                ]
+                ],
+                'scored_at': '2026-06-28T00:00:00Z',
               }
             },
           ));
@@ -209,17 +211,14 @@ void main() {
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
+    await AuthStore.instance.clear();
     await tester.pumpWidget(const SehatikuApp());
     await tester.idle();
     await tester.pump();
 
     // Splash
     expect(find.text('Sehatiku'), findsOneWidget);
-    expect(find.text('Ketuk untuk lanjut'), findsOneWidget);
-
-    await tester.tap(find.text('Ketuk untuk lanjut'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(seconds: 3));
 
     // Onboarding
     expect(find.text('Pantau Kesehatan Lebih Mudah'), findsOneWidget);
@@ -257,6 +256,7 @@ void main() {
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
+    await AuthStore.instance.clear();
     tester.view.devicePixelRatio = 1.0;
     tester.view.physicalSize = const Size(390, 844);
     addTearDown(tester.view.resetPhysicalSize);
@@ -269,7 +269,7 @@ void main() {
     await tester.pump();
 
     // Skip splash -> onboarding -> login -> app.
-    await tester.tap(find.text('Ketuk untuk lanjut'));
+    await tester.pump(const Duration(seconds: 3));
     await settle();
     await tester.tap(find.text('Lewati'));
     await settle();
@@ -320,13 +320,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.arrow_back_rounded));
     await settle();
 
-    final edukasiInkWell = tester.widget<InkWell>(
-      find.ancestor(
-        of: find.text('Edukasi'),
-        matching: find.byType(InkWell),
-      ),
-    );
-    edukasiInkWell.onTap!();
+    await tester.tap(find.text('Edukasi'));
     await settle();
     expect(find.text('Edukasi Kesehatan'), findsOneWidget);
     await tester.tap(find.text('Diabetes'));

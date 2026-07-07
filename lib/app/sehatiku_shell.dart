@@ -127,9 +127,7 @@ class _SehatikuShellState extends State<SehatikuShell> {
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 320),
         child: switch (_stage) {
-          Stage.splash => SplashScreen(
-            onContinue: () => setState(() => _stage = Stage.onboarding),
-          ),
+          Stage.splash => const SplashScreen(),
           Stage.onboarding => OnboardingScreen(
             index: _onboardingIndex,
             onDot: (value) => setState(() => _onboardingIndex = value),

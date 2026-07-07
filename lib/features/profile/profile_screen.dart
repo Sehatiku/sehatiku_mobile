@@ -47,7 +47,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final data = await DashboardService.instance.fetchDashboard();
       if (mounted) setState(() => _dashboard = data);
-    } catch (_) {
+    } catch (e, s) {
+      debugPrint('Error fetching dashboard for profile: $e');
+      debugPrint('$s');
       // Profile still renders without API data — fail silently.
     }
   }
@@ -112,6 +114,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   clipBehavior: Clip.antiAlias,
                   child: Image.asset(
                     userAvatarAssetFor(displayName),
+                    width: double.infinity,
+                    height: double.infinity,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Text(
                       initials,

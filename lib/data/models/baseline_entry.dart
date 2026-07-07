@@ -58,23 +58,36 @@ class BaselineEntry {
       notes: json['notes'] as String?,
       bmi: (json['bmi'] as num?)?.toDouble(),
       bmiCategory: json['bmi_category'] as String?,
-      systolic: json['systolic'] as int? ?? json['systolic_bp_mmhg'] as int?,
-      diastolic: json['diastolic'] as int? ?? json['diastolic_bp_mmhg'] as int?,
+      systolic: json['systolic'] != null
+          ? (json['systolic'] as num).toInt()
+          : (json['systolic_bp_mmhg'] != null ? (json['systolic_bp_mmhg'] as num).toInt() : null),
+      diastolic: json['diastolic'] != null
+          ? (json['diastolic'] as num).toInt()
+          : (json['diastolic_bp_mmhg'] != null ? (json['diastolic_bp_mmhg'] as num).toInt() : null),
       hypertensionStatus: json['hypertension_status'] as String?,
-      bloodSugar: json['blood_sugar'] as int? ??
-          json['glucose'] as int? ??
-          json['fasting_blood_sugar'] as int? ??
-          json['fasting_glucose_mgdl'] as int?,
+      bloodSugar: json['blood_sugar'] != null
+          ? (json['blood_sugar'] as num).toInt()
+          : json['glucose'] != null
+              ? (json['glucose'] as num).toInt()
+              : json['fasting_blood_sugar'] != null
+                  ? (json['fasting_blood_sugar'] as num).toInt()
+                  : json['fasting_glucose_mgdl'] != null
+                      ? (json['fasting_glucose_mgdl'] as num).toInt()
+                      : null,
       hba1cPct: (json['hba1c_pct'] as num?)?.toDouble(),
       diabetesStatus: json['diabetes_status'] as String?,
-      totalCholesterolMgdl: json['total_cholesterol_mgdl'] as int?,
-      hdlMgdl: json['hdl_mgdl'] as int?,
-      ldlMgdl: json['ldl_mgdl'] as int?,
-      triglyceridesMgdl: json['triglycerides_mgdl'] as int?,
+      totalCholesterolMgdl: json['total_cholesterol_mgdl'] != null
+          ? (json['total_cholesterol_mgdl'] as num).toInt()
+          : null,
+      hdlMgdl: json['hdl_mgdl'] != null ? (json['hdl_mgdl'] as num).toInt() : null,
+      ldlMgdl: json['ldl_mgdl'] != null ? (json['ldl_mgdl'] as num).toInt() : null,
+      triglyceridesMgdl: json['triglycerides_mgdl'] != null
+          ? (json['triglycerides_mgdl'] as num).toInt()
+          : null,
       cvdRisk10yrPct: (json['cvd_risk_10yr_pct'] as num?)?.toDouble(),
       cvdRiskCategory: json['cvd_risk_category'] as String?,
-      egfr: json['egfr'] as int?,
-      uacr: json['uacr'] as int?,
+      egfr: json['egfr'] != null ? (json['egfr'] as num).toInt() : null,
+      uacr: json['uacr'] != null ? (json['uacr'] as num).toInt() : null,
       weight: (json['weight'] as num?)?.toDouble(),
     );
   }

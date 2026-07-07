@@ -21,7 +21,7 @@ class TokenBundle {
   factory TokenBundle.fromJson(Map<String, dynamic> json) => TokenBundle(
         accessToken: json['access_token'] as String,
         refreshToken: json['refresh_token'] as String,
-        expiresIn: json['expires_in'] as int,
+        expiresIn: (json['expires_in'] as num).toInt(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -112,7 +112,7 @@ class RefreshResponse {
     return RefreshResponse(
       accessToken: data['access_token'] as String,
       refreshToken: data['refresh_token'] as String,
-      expiresIn: data['expires_in'] as int,
+      expiresIn: (data['expires_in'] as num).toInt(),
     );
   }
 }
