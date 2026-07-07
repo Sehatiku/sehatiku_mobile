@@ -112,15 +112,22 @@ class AppCard extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: c.line),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            c.surface,
+            c.elevated.withValues(alpha: .45),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: c.line.withValues(alpha: .85)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x18000000),
-            blurRadius: 24,
-            offset: Offset(0, 12),
-            spreadRadius: -4,
+            color: Color(0x12000000),
+            blurRadius: 28,
+            offset: Offset(0, 14),
+            spreadRadius: -8,
           ),
         ],
       ),
@@ -241,7 +248,7 @@ class QuickAction extends StatelessWidget {
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: c.line),
               ),
-              child: const Icon(Icons.add, color: AppColors.primary, size: 28),
+              child: Icon(icon, color: AppColors.primary, size: 28),
             ),
             const SizedBox(height: 8),
             FittedBox(
