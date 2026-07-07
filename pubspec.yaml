@@ -78,6 +78,8 @@ flutter:
     - assets/images/logowhite.png
     - assets/icon/sehatikulogo.png
     - assets/images/logo3.png
+    - lib/shared/assets-profile/doctor/
+    - lib/shared/assets-profile/user/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

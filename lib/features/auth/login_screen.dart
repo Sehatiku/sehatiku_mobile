@@ -31,7 +31,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   String? _error;
 
   AnimationController? _pulseController;
-  AnimationController? _ecgController;
   late final TapGestureRecognizer _faskesRecognizer;
 
   @override
@@ -52,11 +51,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       vsync: this,
       duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
-
-    _ecgController ??= AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 5),
-    )..repeat();
   }
 
   @override
@@ -64,8 +58,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     super.reassemble();
     _pulseController?.dispose();
     _pulseController = null;
-    _ecgController?.dispose();
-    _ecgController = null;
     _initControllers();
   }
 
@@ -76,7 +68,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     _userFocus.dispose();
     _passFocus.dispose();
     _pulseController?.dispose();
-    _ecgController?.dispose();
     _faskesRecognizer.dispose();
     super.dispose();
   }
@@ -454,65 +445,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                       ),
                     ),
                     const SizedBox(height: 22),
-
-                    // Creative Heartbeat ECG Divider (Subtle but Unique medical anchor)
-                    SizedBox(
-                      width: double.infinity,
-                      height: 20,
-                      child: AnimatedBuilder(
-                        animation: _ecgController ?? const AlwaysStoppedAnimation(0),
-                        builder: (context, _) {
-                          final ecgVal = _ecgController?.value ?? 0.0;
-                          return CustomPaint(
-                            painter: _SimpleEcgPainter(
-                              progress: ecgVal,
-                              color: colors.line.withValues(alpha: 0.7),
-                              activeColor: AppColors.primary.withValues(alpha: 0.8),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Medical Encryption Banner
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 11,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isDark ? colors.elevated : const Color(0xFFF6FBF9),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isDark
-                              ? colors.line
-                              : const Color(0xFFE2F0EC),
-                        ),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(
-                            Icons.check_circle_rounded,
-                            size: 16,
-                            color: Color(0xFF10B981),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Data login Anda dienkripsi dan tidak dibagikan ke pihak lain.',
-                              style: TextStyle(
-                                color: isDark ? colors.muted : const Color(0xFF677E75),
-                                fontSize: 11.5,
-                                height: 1.45,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -644,63 +576,4 @@ class _HeaderWaveClipper extends CustomClipper<Path> {
 
   @override
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
-}
-
-// Subtle, simple heartbeat ECG line divider
-class _SimpleEcgPainter extends CustomPainter {
-  _SimpleEcgPainter({
-    required this.progress,
-    required this.color,
-    required this.activeColor,
-  });
-
-  final double progress;
-  final Color color;
-  final Color activeColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paintBase = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-
-    final paintActive = Paint()
-      ..color = activeColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.8
-      ..strokeCap = StrokeCap.round;
-
-    final path = Path();
-    final h = size.height;
-    final w = size.width;
-
-    path.moveTo(0, h * 0.5);
-    path.lineTo(w * 0.4, h * 0.5);
-    // Heartbeat Pulse peak
-    path.lineTo(w * 0.44, h * 0.15);
-    path.lineTo(w * 0.49, h * 0.85);
-    path.lineTo(w * 0.54, h * 0.4);
-    path.lineTo(w * 0.58, h * 0.5);
-    path.lineTo(w, h * 0.5);
-
-    // Draw baseline
-    canvas.drawPath(path, paintBase);
-
-    // Draw sweeping active heartbeat sweep
-    final pathMetrics = path.computeMetrics();
-    for (final metric in pathMetrics) {
-      final len = metric.length;
-      final start = len * (progress - 0.15).clamp(0.0, 1.0);
-      final end = len * progress;
-      if (end > start) {
-        final extract = metric.extractPath(start, end);
-        canvas.drawPath(extract, paintActive);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _SimpleEcgPainter oldDelegate) =>
-      oldDelegate.progress != progress;
 }
